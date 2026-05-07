@@ -148,13 +148,6 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
     }
     
     const navProfile = document.getElementById('navProfile');
-    const navSettings = document.getElementById('navSettings');
-    const navExplore = document.getElementById('navExplore');
-    const navShop = document.getElementById('navShop');
-    const navWallet = document.getElementById('navWallet');
-    const navCalls = document.getElementById('navCalls');
-    const navChats = document.getElementById('navChats');
-    const navGames = document.getElementById('navGames');
     const desktopRailItems = document.querySelectorAll('.desktop-nav-rail-item[data-nav-target]');
     const desktopRailReload = document.getElementById('desktopRailReload');
     const desktopRailAccountBtn = document.getElementById('desktopRailAccountBtn');
@@ -176,10 +169,6 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
           this.closeDesktopRailAccountMenu();
           const targetId = item.dataset.navTarget;
           if (!targetId) return;
-          if (targetId === 'navFaq') {
-            window.open('https://toodyann.github.io/Nymo-Support/', '_blank', 'noopener,noreferrer');
-            return;
-          }
           if (window.innerWidth > 768) {
             this.openDesktopSecondaryMenu(targetId, { activateFirst: true, triggerButton: item });
             return;
@@ -223,6 +212,7 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
           desktopRailAccountBtn.contains(target)
           || desktopRailAccountMenu.contains(target)
           || navProfile?.contains(target)
+          || document.getElementById('bottomNavMoreProfile')?.contains(target)
         ) return;
         this.closeDesktopRailAccountMenu();
       });
@@ -257,137 +247,31 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
       });
     }
     
-    if (navProfile) {
-      navProfile.addEventListener('click', (event) => {
-        if (this.mobileNavProfileLongPressTriggered) {
-          this.mobileNavProfileLongPressTriggered = false;
-          event.preventDefault();
-          event.stopPropagation();
-          return;
-        }
-        if (window.innerWidth <= 768 && this.mobileNewChatModeActive) {
-          this.exitMobileNewChatMode({ clearQuery: true, render: false });
-        }
-        if (navProfile.classList.contains('active') && this.currentChat === null && isSettingsScreenActive()) return;
-        this.setActiveNavButton(navProfile);
-        this.showSettings('profile');
-      });
+    // Mobile bottom-nav carousel: init + swipe binding.
+    this.setupMobileNavCarouselSwipes?.();
+    if (typeof this.syncMobileBottomNavCarousel === 'function') {
+      this.syncMobileBottomNavCarousel(this.getActiveMobileNavId?.() || null, { dragX: 0 });
+    }
+    // Prewarm heavy settings templates so first switch doesn't jank.
+    this.prewarmMobileSettingsSections?.();
 
-      let navProfileLongPressTimer = null;
-      const clearNavProfileLongPressTimer = () => {
-        if (!navProfileLongPressTimer) return;
-        clearTimeout(navProfileLongPressTimer);
-        navProfileLongPressTimer = null;
-      };
-      const startNavProfileLongPress = () => {
+    const bottomNav = document.querySelector('.profile-menu-wrapper .bottom-nav');
+    if (bottomNav instanceof HTMLElement && bottomNav.dataset.boundNavTap !== 'true') {
+      bottomNav.dataset.boundNavTap = 'true';
+      bottomNav.addEventListener('click', (event) => {
         if (window.innerWidth > 768) return;
-        clearNavProfileLongPressTimer();
-        navProfileLongPressTimer = window.setTimeout(() => {
-          navProfileLongPressTimer = null;
-          this.mobileNavProfileLongPressTriggered = true;
-          this.toggleDesktopRailAccountMenu(true, { triggerButton: navProfile });
-        }, 420);
-      };
-      navProfile.addEventListener('pointerdown', startNavProfileLongPress);
-      navProfile.addEventListener('pointerup', clearNavProfileLongPressTimer);
-      navProfile.addEventListener('pointercancel', clearNavProfileLongPressTimer);
-      navProfile.addEventListener('pointermove', clearNavProfileLongPressTimer);
-      navProfile.addEventListener('pointerleave', clearNavProfileLongPressTimer);
-    }
-    
-    if (navExplore) {
-      navExplore.addEventListener('click', () => {
-        if (window.innerWidth <= 768 && this.mobileNewChatModeActive) {
-          this.exitMobileNewChatMode({ clearQuery: true, render: false });
-        }
-        if (navExplore.classList.contains('active') && this.currentChat === null && isSettingsScreenActive()) return;
-        this.setActiveNavButton(navExplore);
-        this.settingsParentSection = 'mobile-sections';
-        this.showSettings('mobile-sections');
+        if (bottomNav.classList.contains('is-dragging')) return;
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        const btn = target.closest('.bottom-nav-item');
+        if (!(btn instanceof HTMLElement)) return;
+        const navId = String(btn.id || '').trim();
+        if (!navId) return;
+        this.navigateMobileTo(navId, { syncNav: true });
       });
     }
 
-    if (navShop) {
-      navShop.addEventListener('click', () => {
-        if (window.innerWidth <= 768 && this.mobileNewChatModeActive) {
-          this.exitMobileNewChatMode({ clearQuery: true, render: false });
-        }
-        if (navShop.classList.contains('active') && this.currentChat === null && isSettingsScreenActive()) return;
-        this.setActiveNavButton(navShop);
-        this.settingsParentSection = 'messenger-settings';
-        this.showSettings('messenger-settings');
-      });
-    }
-
-    if (navWallet) {
-      navWallet.addEventListener('click', () => {
-        if (window.innerWidth <= 768 && this.mobileNewChatModeActive) {
-          this.exitMobileNewChatMode({ clearQuery: true, render: false });
-        }
-        if (navWallet.classList.contains('active') && this.currentChat === null && isSettingsScreenActive()) return;
-        this.setActiveNavButton(navWallet);
-        this.showSettings('wallet');
-      });
-    }
-
-    if (navSettings) {
-      navSettings.addEventListener('click', () => {
-        if (window.innerWidth <= 768 && this.mobileNewChatModeActive) {
-          this.exitMobileNewChatMode({ clearQuery: true, render: false });
-        }
-        if (window.innerWidth <= 768) {
-          if (navProfile?.classList.contains('active') && this.currentChat === null && isSettingsScreenActive()) return;
-          if (navProfile) {
-            this.setActiveNavButton(navProfile);
-          } else {
-            this.setActiveNavButton(navSettings);
-          }
-          this.showSettings('profile');
-          return;
-        }
-        if (navSettings.classList.contains('active') && this.currentChat === null && isSettingsScreenActive()) return;
-        this.setActiveNavButton(navSettings);
-        this.settingsParentSection = 'settings-home';
-        this.showSettings('settings-home');
-      });
-    }
-
-    if (navGames) {
-      navGames.addEventListener('click', () => {
-        if (window.innerWidth <= 768 && this.mobileNewChatModeActive) {
-          this.exitMobileNewChatMode({ clearQuery: true, render: false });
-        }
-        if (navGames.classList.contains('active') && this.currentChat === null && isSettingsScreenActive()) return;
-        this.setActiveNavButton(navGames);
-        this.pendingMiniGameView = 'tapper';
-        this.showSettings('mini-games');
-      });
-    }
-    
-    if (navCalls) {
-      navCalls.addEventListener('click', () => {
-        if (window.innerWidth <= 768 && this.mobileNewChatModeActive) {
-          this.exitMobileNewChatMode({ clearQuery: true, render: false });
-        }
-        if (navCalls.classList.contains('active') && this.currentChat === null && isSettingsScreenActive()) return;
-        this.setActiveNavButton(navCalls);
-        this.showSettings('calls');
-      });
-    }
-    
-    if (navChats) {
-      navChats.addEventListener('click', () => {
-        this.closeMobileNewChatCreateMenu();
-        if (
-          navChats.classList.contains('active')
-          && this.currentChat === null
-          && !isSettingsScreenActive()
-          && !this.mobileNewChatModeActive
-        ) return;
-        this.setActiveNavButton(navChats);
-        this.openChatsHomeView({ syncNav: false });
-      });
-    }
+    // "More" sheet removed in favor of full carousel.
 
     if (typeof this.syncDesktopNavRailActive === 'function') {
       this.syncDesktopNavRailActive();
@@ -481,6 +365,7 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
       if (e.key === 'Escape') {
         this.closeDesktopRailAccountMenu();
         this.closeMobileNewChatCreateMenu();
+        this.closeBottomNavMoreSheet();
         this.closeAttachSheet();
         this.closeCameraCapture();
         this.closeContactProfileActionsMenu();
@@ -1437,9 +1322,21 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
 
   applyMobileChatViewportLayout(viewportMetrics = null) {
     const appEl = document.querySelector('.orion-app');
+    const chatContainer = document.getElementById('chatContainer');
+    if (appEl) {
+      const w = window.innerWidth;
+      const suppressDesktopSecondaryForChat = Boolean(
+        chatContainer
+        && w >= 769
+        && w <= 900
+        && appEl.classList.contains('chat-active')
+        && chatContainer.classList.contains('active')
+      );
+      appEl.classList.toggle('suppress-desktop-secondary-for-chat', suppressDesktopSecondaryForChat);
+    }
+
     const header = document.querySelector('.app-header');
     const chatArea = document.querySelector('.chat-area');
-    const chatContainer = document.getElementById('chatContainer');
     const inputArea = document.querySelector('.message-input-area');
     const messages = document.getElementById('messagesContainer');
     if (!appEl || !header || !chatArea || !chatContainer || !inputArea) return;
@@ -1498,9 +1395,13 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
       ? metrics.keyboardHeight
       : 0;
 
+    const narrowDesktopRailInsetPx = appEl.classList.contains('suppress-desktop-secondary-for-chat')
+      ? 72
+      : 0;
+
     chatArea.style.setProperty('position', 'fixed', 'important');
     chatArea.style.setProperty('top', `${viewportTop}px`, 'important');
-    chatArea.style.setProperty('left', '0');
+    chatArea.style.setProperty('left', `${narrowDesktopRailInsetPx}px`, 'important');
     chatArea.style.setProperty('right', '0');
     chatArea.style.setProperty('bottom', 'auto');
     chatArea.style.setProperty('height', `${viewportHeight}px`);

@@ -190,6 +190,17 @@ html.dark-theme .app-chat-typing {
     backdrop-filter: blur(18px) saturate(1.08);
   }
 
+  #navMore {
+    display: none !important;
+  }
+
+  .bottom-nav-more {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
   .bottom-nav-indicator {
     width: 56px;
     height: calc(100% - 20px);

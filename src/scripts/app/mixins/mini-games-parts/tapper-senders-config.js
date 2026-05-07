@@ -228,7 +228,7 @@ const getSenderNameGroupByAvatarKey = (avatarKey = '') => {
 const getSenderNamePoolByGroup = (group = 'neutral') => {
   if (group === 'male') return TAP_SENDER_MALE_NAME_POOL;
   if (group === 'female') return TAP_SENDER_FEMALE_NAME_POOL;
-  return TAP_SENDER_NEUTRAL_NAME_POOL;
+  return TAP_SENDER_NEUTRAL_NAME_POOL; 
 };
 
 const getStringHash = (value = '') => {

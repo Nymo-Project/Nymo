@@ -1710,7 +1710,17 @@ export class ChatAppMessagingRenderMediaMethods extends ChatAppMessagingSendUplo
   // Метод-обгортка для імпортованої функції getSettingsTemplate
 
   getSettingsTemplate(sectionName) {
-    return getSettingsTemplate(sectionName, this.settings?.language || 'uk');
+    const lang = this.settings?.language || 'uk';
+    const key = `${lang}:${String(sectionName || '').trim()}`;
+    if (!this.settingsTemplateCache) {
+      this.settingsTemplateCache = new Map();
+    }
+    if (this.settingsTemplateCache.has(key)) {
+      return this.settingsTemplateCache.get(key);
+    }
+    const html = getSettingsTemplate(sectionName, lang);
+    this.settingsTemplateCache.set(key, html);
+    return html;
   }
 
 
@@ -1725,8 +1735,66 @@ export class ChatAppMessagingRenderMediaMethods extends ChatAppMessagingSendUplo
     if (btn) {
       btn.classList.add('active');
     }
+    const navMore = document.getElementById('navMore');
+    if (navMore) {
+      const ctxIds = new Set(['navWallet', 'navExplore', 'navProfile']);
+      navMore.classList.toggle('bottom-nav-more-route', Boolean(btn && ctxIds.has(btn.id)));
+    }
     this.updateBottomNavIndicator(btn);
+    this.syncMobileBottomNavCarousel(btn?.id || null);
     this.syncDesktopNavRailActive(btn?.id || null);
+  }
+
+  syncMobileBottomNavCarousel(activeNavId = null, options = {}) {
+    if (window.innerWidth > 768) return;
+    const nav = document.querySelector('.bottom-nav');
+    if (!(nav instanceof HTMLElement)) return;
+
+    const order = typeof this.getMobileNavCarouselOrder === 'function'
+      ? this.getMobileNavCarouselOrder()
+      : ['navCalls', 'navChats', 'navShop', 'navSettings'];
+    if (!order.length) return;
+
+    const resolved = String(activeNavId || '').trim()
+      || (document.querySelector('.bottom-nav-item.active')?.id || order[0] || 'navChats');
+    const activeIndexRaw = order.indexOf(resolved);
+    const activeIndex = activeIndexRaw >= 0 ? activeIndexRaw : 0;
+
+    const dragX = Number.isFinite(Number(options.dragX)) ? Number(options.dragX) : 0;
+    nav.style.setProperty('--nav-carousel-drag-x', `${dragX}px`);
+
+    const items = Array.from(nav.querySelectorAll('.bottom-nav-item'))
+      .filter((el) => el instanceof HTMLElement && order.includes(el.id));
+
+    const step = 72; // px between icons
+
+    const leftIndex = (activeIndex - 1 + order.length) % order.length;
+    const rightIndex = (activeIndex + 1) % order.length;
+
+    items.forEach((el) => {
+      el.classList.remove('is-left', 'is-right', 'is-hidden');
+      // Default state: hidden until proven neighbor/active.
+      el.classList.add('is-hidden');
+      const idx = order.indexOf(el.id);
+      if (idx === activeIndex) {
+        el.style.setProperty('--nav-carousel-x', `0px`);
+        el.classList.remove('is-hidden');
+        return;
+      }
+      if (idx === leftIndex) {
+        el.classList.add('is-left');
+        el.style.setProperty('--nav-carousel-x', `${-step}px`);
+        el.classList.remove('is-hidden');
+        return;
+      }
+      if (idx === rightIndex) {
+        el.classList.add('is-right');
+        el.style.setProperty('--nav-carousel-x', `${step}px`);
+        el.classList.remove('is-hidden');
+        return;
+      }
+      el.style.setProperty('--nav-carousel-x', `0px`);
+    });
   }
 
 
@@ -1768,6 +1836,9 @@ export class ChatAppMessagingRenderMediaMethods extends ChatAppMessagingSendUplo
 
 
   handleBottomNavResize() {
+    if (typeof this.closeBottomNavMoreSheet === 'function') {
+      this.closeBottomNavMoreSheet();
+    }
     if (window.innerWidth <= 768) {
       this.restoreBottomNavToHome({ animate: false });
       return;

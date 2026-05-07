@@ -350,20 +350,6 @@
     color: #ffffff !important;
   }
 
-  .bottom-nav-fab {
-    width: 62px;
-    height: 62px;
-    min-width: 62px;
-    min-height: 62px;
-    border-radius: 999px;
-    border: 0;
-    background: linear-gradient(140deg, var(--primary-color), var(--primary-strong));
-    color: #ffffff;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 16px 34px rgba(70, 136, 255, 0.30);
-    transform: translateY(-14px);
-  }
+  /* bottom-nav-fab removed */
 }
 

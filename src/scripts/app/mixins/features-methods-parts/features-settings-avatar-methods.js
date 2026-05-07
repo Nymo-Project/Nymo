@@ -8,6 +8,53 @@ import {
 import { ChatAppFeaturesProfileWalletMethods } from './features-profile-wallet-methods.js';
 
 export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfileWalletMethods {
+  prewarmMobileSettingsSections() {
+    if (this.mobileSettingsPrewarmed) return;
+    if (window.innerWidth > 768) return;
+    this.mobileSettingsPrewarmed = true;
+
+    const sections = [
+      // order: most frequently used first
+      'profile',
+      'wallet',
+      'messenger-settings',
+      'calls',
+      'mini-games',
+      'profile-settings',
+      'profile-items'
+    ];
+
+    const queue = sections.slice();
+    const step = () => {
+      const next = queue.shift();
+      if (!next) return;
+      try {
+        const html = this.getSettingsTemplate(next);
+        if (html) {
+          // Force HTML parsing during idle time (detached to avoid layout).
+          const tmp = document.createElement('div');
+          tmp.innerHTML = html;
+          // Touch one node to ensure parse completed.
+          void tmp.firstElementChild;
+        }
+      } catch {
+        // Ignore prewarm failures; user navigation still works.
+      }
+
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(step, { timeout: 1200 });
+      } else {
+        window.setTimeout(step, 16);
+      }
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(step, { timeout: 1200 });
+    } else {
+      window.setTimeout(step, 60);
+    }
+  }
+
   setupSettingsSwipeBack(settingsContainer) {
     setupSettingsSwipeBack(settingsContainer, this);
   }
@@ -154,36 +201,44 @@ export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfile
       });
       
       if (isMobile) {
-        // На мобільному видаляємо всі позиційні стилі
-        settingsContainer.style.cssText = `
-          display: flex !important;
-          position: relative !important;
-          top: auto !important;
-          left: auto !important;
-          right: auto !important;
-          bottom: auto !important;
-          width: 100% !important;
-          height: 100% !important;
-          z-index: auto !important;
-          background-color: transparent !important;
-          flex-direction: column !important;
-          overflow: hidden !important;
-          flex: 1 !important;
-          min-height: 0 !important;
-        `;
+        // On mobile: apply container layout only once to avoid janky relayout on every section switch.
+        if (settingsContainer.dataset.mobileLayoutApplied !== 'true') {
+          settingsContainer.dataset.mobileLayoutApplied = 'true';
+          settingsContainer.style.cssText = `
+            display: flex !important;
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: auto !important;
+            background-color: transparent !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+            flex: 1 !important;
+            min-height: 0 !important;
+            contain: layout paint style;
+          `;
+        }
       } else {
-        // На ПК просто показуємо контейнер як flex item в chat-area (займає місце welcomeScreen)
-        settingsContainer.style.cssText = `
-          display: flex !important;
-          flex: 1 !important;
-          flex-direction: column !important;
-          width: auto !important;
-          height: 100% !important;
-          position: static !important;
-          overflow: hidden !important;
-          background-color: var(--bg-color) !important;
-          min-height: 0 !important;
-        `;
+        // Desktop layout: apply once as well.
+        if (settingsContainer.dataset.desktopLayoutApplied !== 'true') {
+          settingsContainer.dataset.desktopLayoutApplied = 'true';
+          settingsContainer.style.cssText = `
+            display: flex !important;
+            flex: 1 !important;
+            flex-direction: column !important;
+            width: auto !important;
+            height: 100% !important;
+            position: static !important;
+            overflow: hidden !important;
+            background-color: var(--bg-color) !important;
+            min-height: 0 !important;
+            contain: layout paint style;
+          `;
+        }
       }
       
       const settingsSection = settingsContainer.querySelector('.settings-section');
@@ -191,12 +246,16 @@ export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfile
       if (settingsSection) {
         settingsSection.classList.add('active');
         
-        // Force inline styles for section
-        settingsSection.style.display = 'flex';
-        settingsSection.style.flexDirection = 'column';
-        settingsSection.style.height = '100%';
-        settingsSection.style.minHeight = '0';
-        settingsSection.style.width = '100%';
+        // Apply section layout once (avoid style churn on every switch).
+        if (settingsSection.dataset.layoutApplied !== 'true') {
+          settingsSection.dataset.layoutApplied = 'true';
+          settingsSection.style.display = 'flex';
+          settingsSection.style.flexDirection = 'column';
+          settingsSection.style.height = '100%';
+          settingsSection.style.minHeight = '0';
+          settingsSection.style.width = '100%';
+          settingsSection.style.contain = 'layout paint style';
+        }
       }
       
       if (sectionName === 'profile-settings') {

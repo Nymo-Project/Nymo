@@ -18,6 +18,273 @@ const DESKTOP_SECONDARY_BACK_ARROW_LEFT_PATH = 'M165.66,202.34a8,8,0,0,1-11.32,1
 const DESKTOP_SECONDARY_BACK_ARROW_RIGHT_PATH = 'M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66A8,8,0,0,1,101.66,42.34l80,80A8,8,0,0,1,181.66,133.66Z';
 
 export class ChatAppInteractionNavigationMethods {
+  scheduleMobileNavAction(navId, action) {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile || typeof action !== 'function') {
+      action?.();
+      return;
+    }
+    const reducedMotion = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion || document.documentElement.classList.contains('no-animations')) {
+      action();
+      return;
+    }
+    if (this.mobileNavPendingActionTimer) {
+      window.clearTimeout(this.mobileNavPendingActionTimer);
+      this.mobileNavPendingActionTimer = 0;
+    }
+    // Let bottom-nav carousel transition finish first, then run heavy UI work
+    // during an idle slice to avoid janking compositor-driven transforms.
+    this.mobileNavPendingActionTimer = window.setTimeout(() => {
+      this.mobileNavPendingActionTimer = 0;
+      const run = () => action();
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(run, { timeout: 1200 });
+        return;
+      }
+      window.setTimeout(run, 0);
+    }, 260);
+  }
+
+  getMobileNavCarouselOrder() {
+    // Mobile bottom-nav carousel order (includes all sections).
+    return [
+      'navCalls',
+      'navChats',
+      'navShop',
+      'navWallet',
+      'navGames',
+      'navProfile',
+      'navSettings'
+    ];
+  }
+
+  getActiveMobileNavId() {
+    const active = document.querySelector('.bottom-nav-item.active');
+    if (active instanceof HTMLElement && active.id) return active.id;
+    return 'navChats';
+  }
+
+  animateMobileNavCarouselTransition({ direction = 1 } = {}) {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) return;
+    const reducedMotion = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion || document.documentElement.classList.contains('no-animations')) return;
+
+    const sidebar = document.querySelector('.sidebar');
+    if (!(sidebar instanceof HTMLElement)) return;
+    if (sidebar.dataset.mobileNavAnimating === 'true') return;
+    sidebar.dataset.mobileNavAnimating = 'true';
+
+    const distance = Math.max(240, Math.min(window.innerWidth || 320, 520));
+    const fromX = 0;
+    const toX = -Math.sign(direction || 1) * Math.min(distance, window.innerWidth || distance);
+
+    try {
+      sidebar.animate(
+        [
+          { transform: `translate3d(${fromX}px, 0, 0)` },
+          { transform: `translate3d(${toX}px, 0, 0)` }
+        ],
+        { duration: 160, easing: 'cubic-bezier(0.22, 0.82, 0.25, 1)', fill: 'both' }
+      ).finished.catch(() => {});
+    } finally {
+      // Snap back quickly so content change reads like a carousel "page flip".
+      window.setTimeout(() => {
+        sidebar.style.transform = `translate3d(${Math.sign(direction || 1) * (window.innerWidth || 320)}px, 0, 0)`;
+        void sidebar.offsetWidth;
+        sidebar.animate(
+          [
+            { transform: sidebar.style.transform },
+            { transform: 'translate3d(0, 0, 0)' }
+          ],
+          { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'both' }
+        );
+        window.setTimeout(() => {
+          sidebar.style.removeProperty('transform');
+          delete sidebar.dataset.mobileNavAnimating;
+        }, 260);
+      }, 170);
+    }
+  }
+
+  navigateMobileTo(targetNavId, { syncNav = true } = {}) {
+    const navId = String(targetNavId || '').trim() || 'navChats';
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) return;
+
+    this.closeMobileNewChatCreateMenu?.();
+    this.closeBottomNavMoreSheet?.();
+
+    const bottomNavRoot = document.querySelector('.profile-menu-wrapper .bottom-nav');
+    if (bottomNavRoot instanceof HTMLElement) {
+      bottomNavRoot.classList.add('is-transitioning');
+      if (this.mobileNavTransitioningTimer) {
+        window.clearTimeout(this.mobileNavTransitioningTimer);
+        this.mobileNavTransitioningTimer = 0;
+      }
+      // Give iOS time to finish heavy paints after section switch.
+      this.mobileNavTransitioningTimer = window.setTimeout(() => {
+        this.mobileNavTransitioningTimer = 0;
+        bottomNavRoot.classList.remove('is-transitioning');
+      }, 520);
+    }
+
+    const navBtn = document.getElementById(navId);
+    if (syncNav && navBtn) {
+      this.setActiveNavButton(navBtn);
+    }
+
+    this.scheduleMobileNavAction(navId, () => {
+      if (navId === 'navChats') {
+        this.openChatsHomeView({ syncNav: false });
+        return;
+      }
+
+      if (navId === 'navShop') {
+        this.settingsParentSection = 'messenger-settings';
+        this.showSettings('messenger-settings');
+        return;
+      }
+
+      if (navId === 'navCalls') {
+        this.showSettings('calls');
+        return;
+      }
+
+      if (navId === 'navWallet') {
+        this.showSettings('wallet');
+        return;
+      }
+
+      if (navId === 'navGames') {
+        this.pendingMiniGameView = 'tapper';
+        this.showSettings('mini-games');
+        return;
+      }
+
+      if (navId === 'navProfile') {
+        this.showSettings('profile');
+        return;
+      }
+
+      if (navId === 'navSettings') {
+        this.settingsParentSection = 'settings-home';
+        this.showSettings('settings-home');
+      }
+    });
+  }
+
+  setupMobileNavCarouselSwipes() {
+    if (this.mobileNavCarouselBound) return;
+    this.mobileNavCarouselBound = true;
+
+    const root = document.querySelector('.bottom-nav');
+    if (!(root instanceof HTMLElement)) return;
+    if (typeof this.syncMobileBottomNavCarousel === 'function') {
+      this.syncMobileBottomNavCarousel(this.getActiveMobileNavId(), { dragX: 0 });
+    }
+
+    let tracking = false;
+    let startX = 0;
+    let startY = 0;
+    let lastX = 0;
+    let lastY = 0;
+    let decidedAxis = false;
+    let axis = 'none';
+    let draggingClassOn = false;
+
+    const onPointerDown = (event) => {
+      if (window.innerWidth > 768) return;
+      const appEl = document.querySelector('.orion-app');
+      if (appEl?.classList.contains('mobile-chat-open')) return;
+      if (event.pointerType === 'mouse') return;
+      if (event.defaultPrevented) return;
+      if (!(event.target instanceof Element)) return;
+      if (!root.contains(event.target)) return;
+
+      tracking = true;
+      decidedAxis = false;
+      axis = 'none';
+      draggingClassOn = false;
+      startX = event.clientX;
+      startY = event.clientY;
+      lastX = startX;
+      lastY = startY;
+    };
+
+    const onPointerMove = (event) => {
+      if (!tracking) return;
+      lastX = event.clientX;
+      lastY = event.clientY;
+
+      const dx = lastX - startX;
+      const dy = lastY - startY;
+
+      if (!decidedAxis) {
+        const adx = Math.abs(dx);
+        const ady = Math.abs(dy);
+        if (adx < 6 && ady < 6) return;
+        decidedAxis = true;
+        axis = adx > ady * 1.2 ? 'x' : 'y';
+      }
+
+      if (axis === 'x') {
+        if (!draggingClassOn) {
+          draggingClassOn = true;
+          root.classList.add('is-dragging');
+        }
+        // Prevent page from capturing horizontal swipe as back/forward or scroll.
+        if (event.cancelable) event.preventDefault();
+        if (typeof this.syncMobileBottomNavCarousel === 'function') {
+          this.syncMobileBottomNavCarousel(this.getActiveMobileNavId(), { dragX: dx });
+        }
+      }
+    };
+
+    const onPointerUp = () => {
+      if (!tracking) return;
+      tracking = false;
+      if (draggingClassOn) {
+        root.classList.remove('is-dragging');
+        draggingClassOn = false;
+      }
+      if (typeof this.syncMobileBottomNavCarousel === 'function') {
+        this.syncMobileBottomNavCarousel(this.getActiveMobileNavId(), { dragX: 0 });
+      }
+
+      if (axis !== 'x') return;
+
+      const dx = lastX - startX;
+      const adx = Math.abs(dx);
+      if (adx < 54) return;
+
+      const order = this.getMobileNavCarouselOrder();
+      const current = this.getActiveMobileNavId();
+      const currentIndex = order.indexOf(current);
+      if (currentIndex < 0) {
+        const fallback = order[0];
+        if (fallback) {
+          this.navigateMobileTo(fallback, { syncNav: true });
+        }
+        return;
+      }
+      const direction = dx < 0 ? 1 : -1;
+      const total = Math.max(1, order.length);
+      const nextIndex = (currentIndex + direction + total) % total;
+      const nextId = order[nextIndex] || current;
+      if (nextId === current) return;
+      this.navigateMobileTo(nextId, { syncNav: true });
+    };
+
+    root.addEventListener('pointerdown', onPointerDown, { passive: true });
+    root.addEventListener('pointermove', onPointerMove, { passive: false });
+    root.addEventListener('pointerup', onPointerUp, { passive: true });
+    root.addEventListener('pointercancel', onPointerUp, { passive: true });
+  }
+
   syncDesktopSecondaryMenuBackButtonIcon() {
     const sidebar = document.querySelector('.sidebar');
     const backButton = document.getElementById('desktopSecondaryMenuBack');
@@ -742,6 +1009,7 @@ export class ChatAppInteractionNavigationMethods {
 
 
   openChatsHomeView({ syncNav = true } = {}) {
+    this.closeBottomNavMoreSheet();
     const navChats = document.getElementById('navChats');
     if (syncNav && navChats) this.setActiveNavButton(navChats);
     this.showBottomNav();
@@ -810,6 +1078,9 @@ export class ChatAppInteractionNavigationMethods {
     this.showWelcomeScreen();
     this.restoreBottomNavToHome({ animate: false });
     this.renderChatsList();
+    if (typeof this.applyMobileChatViewportLayout === 'function') {
+      this.applyMobileChatViewportLayout();
+    }
   }
 
 
@@ -1084,6 +1355,30 @@ export class ChatAppInteractionNavigationMethods {
   }
 
 
+  closeBottomNavMoreSheet() {
+    const root = document.getElementById('bottomNavMoreRoot');
+    const navMore = document.getElementById('navMore');
+    if (!root?.classList.contains('is-open')) return;
+    root.classList.remove('is-open');
+    root.setAttribute('aria-hidden', 'true');
+    if (navMore) navMore.setAttribute('aria-expanded', 'false');
+  }
+
+
+  toggleBottomNavMoreSheet() {
+    const root = document.getElementById('bottomNavMoreRoot');
+    const navMore = document.getElementById('navMore');
+    if (!root || !navMore || window.innerWidth > 768) return;
+    const shouldOpen = !root.classList.contains('is-open');
+    if (shouldOpen) {
+      this.closeMobileNewChatCreateMenu();
+    }
+    root.classList.toggle('is-open', shouldOpen);
+    root.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+    navMore.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+  }
+
+
   positionMobileNewChatCreateMenu(anchorEl) {
     const menu = document.getElementById('mobileNewChatCreateMenu');
     if (!menu || !(anchorEl instanceof HTMLElement) || window.innerWidth > 768) return;
@@ -1138,6 +1433,7 @@ export class ChatAppInteractionNavigationMethods {
     this.desktopSecondaryChatSearchMode = true;
     this.desktopSecondaryUserSearchError = '';
     this.closeMobileNewChatCreateMenu();
+    this.closeBottomNavMoreSheet();
 
     const searchBox = document.querySelector('.search-box');
     const searchInput = document.getElementById('searchInput');

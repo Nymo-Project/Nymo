@@ -2366,11 +2366,13 @@ export class ChatAppCoreMethods {
     const navProfile = document.getElementById('navProfile');
     const avatarEl = navProfile?.querySelector('.nav-avatar');
     const railAvatarEl = document.getElementById('desktopRailAccountAvatar');
+    const moreAvatarEl = document.getElementById('bottomNavMoreAvatar');
 
     const name = this.user?.name || 'Користувач Nymo';
 
     this.applyUserAvatarToElement(avatarEl, name);
     this.applyUserAvatarToElement(railAvatarEl, name);
+    this.applyUserAvatarToElement(moreAvatarEl, name);
   }
 
   getInitials(name) {
