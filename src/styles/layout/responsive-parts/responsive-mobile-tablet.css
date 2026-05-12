@@ -117,19 +117,14 @@
     gap: var(--mobile-space-2);
     padding: calc(env(safe-area-inset-top) + var(--mobile-space-3))
       var(--mobile-space-4) var(--mobile-space-3);
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--bg-color) 98%, transparent) 0%,
-      color-mix(in srgb, var(--bg-color) 92%, transparent) 70%,
-      color-mix(in srgb, var(--bg-color) 0%, transparent) 100%
-    );
-    border-bottom: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+    border-bottom: none;
+    backdrop-filter: blur(14px) saturate(1.1);
+    -webkit-backdrop-filter: blur(14px) saturate(1.1);
   }
 
-  .search-box.is-mobile-new-chat-mode {
-    border-bottom-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
+  .search-box.is-mobile-new-chat-mode .search-input {
+    border-color: color-mix(in srgb, var(--primary-color) 40%, transparent);
   }
 
   .search-input {
@@ -137,35 +132,42 @@
     min-height: var(--mobile-touch-size);
     width: 100%;
     margin: 0;
-    padding: 0 14px 0 42px;
+    padding: 0 14px 0 44px;
     border-radius: 14px;
-    border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
-    background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--text-primary) 7%, transparent);
     color: var(--text-primary);
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.25;
+    font-weight: 400;
   }
 
   .search-input:focus {
-    border-color: color-mix(in srgb, var(--primary-color) 70%, #ffffff 30%);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 24%, transparent);
+    background: color-mix(in srgb, var(--text-primary) 4%, transparent);
+    border-color: color-mix(in srgb, var(--text-secondary) 22%, transparent);
+    box-shadow: none;
   }
 
   .search-input::placeholder {
-    color: color-mix(in srgb, var(--text-secondary) 88%, transparent);
+    color: var(--text-secondary);
+    opacity: 0.85;
   }
 
   .search-icon {
     position: absolute;
-    opacity: 1;
+    opacity: 0.75;
     left: 28px;
     top: 50%;
     width: 17px;
     height: 17px;
-    color: color-mix(in srgb, var(--text-secondary) 84%, transparent);
+    color: var(--text-secondary);
     transform: translateY(-50%);
     z-index: 2;
     pointer-events: none;
+  }
+
+  .search-input:focus ~ .search-icon {
+    opacity: 1;
   }
 
   .search-box .btn-new-chat {
@@ -173,15 +175,20 @@
     height: var(--mobile-touch-size);
     min-width: var(--mobile-touch-size);
     border-radius: 12px;
-    color: var(--text-primary);
-    background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
-    border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
 
   .search-box .btn-new-chat svg {
     width: 20px;
     height: 20px;
+  }
+
+  .search-box .btn-new-chat:hover {
+    background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+    color: var(--text-primary);
   }
 
   .search-box .btn-new-chat:active {
@@ -274,9 +281,10 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    padding: 6px var(--mobile-space-3) var(--mobile-content-bottom);
+    gap: 0;
+    padding: 4px 0 var(--mobile-content-bottom);
     scroll-padding-bottom: calc(var(--mobile-content-bottom) + 20px);
+    background: transparent;
   }
 
   .chats-list.mobile-new-chat-results-mode {
@@ -400,18 +408,35 @@
     width: 100%;
     margin: 0;
     border: 0;
-    border-radius: 18px;
-    padding: 10px var(--mobile-space-3);
+    border-radius: 0;
+    padding: 12px var(--mobile-space-4);
     min-height: 72px;
     display: grid;
     grid-template-columns: 52px minmax(0, 1fr) auto;
     align-items: center;
     column-gap: var(--mobile-space-3);
-    background: color-mix(in srgb, var(--bg-elevated) 50%, transparent);
+    background: transparent;
+    position: relative;
     transition:
-      background-color 0.2s ease,
-      transform 0.18s ease,
-      box-shadow 0.2s ease;
+      background-color 0.18s ease,
+      transform 0.18s ease;
+  }
+
+  .chat-item::after {
+    content: "";
+    position: absolute;
+    left: calc(var(--mobile-space-4) + 52px + var(--mobile-space-3));
+    right: var(--mobile-space-4);
+    bottom: 0;
+    height: 1px;
+    background: color-mix(in srgb, var(--border-color) 50%, transparent);
+    pointer-events: none;
+  }
+
+  .chat-item:last-child::after,
+  .chat-item.active::after,
+  .chat-item:has(+ .chat-item.active)::after {
+    display: none;
   }
 
   .chat-item + .chat-item::before {
@@ -419,18 +444,17 @@
   }
 
   .chat-item:hover {
-    background: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
+    background: transparent;
   }
 
   .chat-item:active {
-    transform: scale(0.99);
+    background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+    transform: none;
   }
 
   .chat-item.active {
-    background: color-mix(in srgb, var(--bg-elevated) 74%, var(--primary-color) 26%);
-    box-shadow:
-      inset 0 0 0 1px color-mix(in srgb, var(--primary-color) 46%, transparent),
-      0 8px 22px rgba(0, 0, 0, 0.22);
+    background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+    box-shadow: none;
   }
 
   .chat-avatar {
@@ -550,6 +574,10 @@
     margin: 0 !important;
     z-index: 90 !important;
     pointer-events: none;
+  }
+
+  .profile-menu-wrapper .bottom-nav #navSettings {
+    display: none !important;
   }
 
   .profile-menu-wrapper .bottom-nav {

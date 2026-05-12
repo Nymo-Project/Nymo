@@ -48,15 +48,15 @@ export class ChatAppInteractionNavigationMethods {
   }
 
   getMobileNavCarouselOrder() {
-    // Mobile bottom-nav carousel order (includes all sections).
+    // Mobile bottom-nav carousel order. navSettings is intentionally
+    // excluded on mobile — settings are reached via Profile / mobile-sections.
     return [
       'navCalls',
       'navChats',
       'navShop',
       'navWallet',
       'navGames',
-      'navProfile',
-      'navSettings'
+      'navProfile'
     ];
   }
 

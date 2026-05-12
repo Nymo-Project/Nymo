@@ -301,14 +301,8 @@ html.dark-theme .desktop-nav-rail-item.active[data-nav-target="navChats"] {
   color: #000000;
 }
 
-html.dark-theme .search-input {
-  background-color: #080808;
-  border-color: rgba(152, 152, 152, 0.34);
-}
-
 html.dark-theme .search-input:focus {
-  border-color: rgba(188, 188, 188, 0.62);
-  box-shadow: 0 0 0 3px rgba(128, 128, 128, 0.2);
+  border-color: color-mix(in srgb, var(--text-secondary) 38%, transparent);
 }
 
 html.dark-theme .profile-menu-wrapper .bottom-nav,
