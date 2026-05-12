@@ -221,6 +221,10 @@ export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfile
             min-height: 0 !important;
             contain: layout paint style;
           `;
+        } else if (settingsContainer.style.display !== 'flex') {
+          // Ensure visibility — inline display may have been set to 'none'
+          // earlier (e.g. by openChat / openChatsHomeView / back button).
+          settingsContainer.style.display = 'flex';
         }
       } else {
         // Desktop layout: apply once as well.
@@ -238,6 +242,10 @@ export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfile
             min-height: 0 !important;
             contain: layout paint style;
           `;
+        } else if (settingsContainer.style.display !== 'flex') {
+          // Ensure visibility — inline display may have been set to 'none'
+          // earlier (e.g. by openChat / openChatsHomeView / back button).
+          settingsContainer.style.display = 'flex';
         }
       }
       
