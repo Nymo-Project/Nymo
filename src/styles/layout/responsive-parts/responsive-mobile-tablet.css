@@ -1151,12 +1151,39 @@
   }
 
   #settingsContainerMobile #wallet .wallet-subsection-switch {
-    margin: 4px 2px 10px;
-    padding: 7px;
+    display: flex;
+    width: 100%;
+    align-self: stretch;
+    margin: 4px 0 10px;
+    padding: 6px;
+    gap: 6px;
   }
 
   #settingsContainerMobile #wallet .wallet-subsection-btn {
-    padding: 9px 15px;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 9px 12px;
+    text-align: center;
+  }
+
+  /* Strip the desktop "island" chrome from the subsection back button on
+     mobile — keep just the icon. The desktop rules use !important so the
+     mobile override must too. */
+  .settings-subsection .settings-subsection-back.btn-back-subsection,
+  html:not(.dark-theme) .settings-subsection .settings-subsection-back.btn-back-subsection,
+  html.dark-theme .settings-subsection .settings-subsection-back.btn-back-subsection {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* On mobile the wallet is already reachable via the bottom-nav, so the
+     duplicate entry inside the profile settings menu card is hidden. */
+  #settingsContainerMobile .profile-settings-card.profile-settings-menu-card
+    .settings-menu-item[data-section="wallet"] {
+    display: none !important;
   }
 
   #settingsContainerMobile .settings-menu-list,
