@@ -100,13 +100,14 @@ export function setupMiniGameViewController({
   const addMobileGameCenterBackButtons = () => {
     if (!settingsContainer) return;
 
-    const panelsWithHeader = settingsContainer.querySelectorAll('.mini-game-panel.mini-game-view[data-mini-game-panel]');
-    panelsWithHeader.forEach((panelEl) => {
+    const panels = settingsContainer.querySelectorAll('.mini-game-panel.mini-game-view[data-mini-game-panel]');
+    panels.forEach((panelEl) => {
       const panelName = panelEl.dataset.miniGamePanel;
       if (!panelName || panelName === 'tapper') return;
 
-      const headerEl = panelEl.querySelector('.mini-game-view-header');
-      if (!headerEl || headerEl.querySelector('[data-mini-game-mobile-back]')) return;
+      if (panelEl.querySelector(':scope > [data-mini-game-mobile-back], :scope > .mini-game-view-header > [data-mini-game-mobile-back]')) {
+        return;
+      }
 
       const backBtn = document.createElement('button');
       backBtn.type = 'button';
@@ -119,7 +120,15 @@ export function setupMiniGameViewController({
         </svg>
       `;
       backBtn.addEventListener('click', () => setMiniGameView('tapper'));
-      headerEl.prepend(backBtn);
+
+      const headerEl = panelEl.querySelector('.mini-game-view-header');
+      if (headerEl) {
+        headerEl.prepend(backBtn);
+      } else {
+        // Panels without a header (e.g. Drift) get an absolutely
+        // positioned overlay back button at the top-left of the stage.
+        panelEl.prepend(backBtn);
+      }
     });
   };
 
