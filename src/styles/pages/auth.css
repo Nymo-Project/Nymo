@@ -17,9 +17,12 @@ body {
 
 .auth-page {
   --auth-nymo-tone: #0b0b0b;
-  --auth-logo-opacity: 0.34;
-  --auth-logo-shadow: rgb(0, 0, 0);
-  --auth-logo-fill: rgba(0, 0, 0, 0.225);
+  --auth-aurora-one: rgba(124, 58, 237, 0.18);
+  --auth-aurora-two: rgba(56, 189, 248, 0.16);
+  --auth-aurora-three: rgba(248, 113, 113, 0.12);
+  --auth-letter-stroke: rgba(15, 17, 24, 0.6);
+  --auth-letter-glow: rgba(15, 17, 24, 0.16);
+  --auth-letter-fill: rgba(15, 17, 24, 0.04);
   position: relative;
   min-height: 100dvh;
   display: flex;
@@ -35,13 +38,12 @@ body {
 
 html.dark-theme .auth-page {
   --auth-nymo-tone: #ffffff;
-  --auth-logo-opacity: 0.28;
-  --auth-logo-shadow: rgba(20, 20, 20, 0.18);
-  --auth-logo-fill: rgba(255, 255, 255, 0.16);
-}
-
-.dark-theme .auth-marquee__track {
-  mix-blend-mode: screen;
+  --auth-aurora-one: rgba(129, 140, 248, 0.26);
+  --auth-aurora-two: rgba(45, 212, 191, 0.18);
+  --auth-aurora-three: rgba(244, 114, 182, 0.16);
+  --auth-letter-stroke: rgba(255, 255, 255, 0.55);
+  --auth-letter-glow: rgba(255, 255, 255, 0.18);
+  --auth-letter-fill: rgba(255, 255, 255, 0.04);
 }
 
 .auth-page::before {
@@ -52,7 +54,7 @@ html.dark-theme .auth-page::before {
   color: var(--auth-nymo-tone);
 }
 
-.auth-marquee {
+.auth-scene {
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -61,28 +63,86 @@ html.dark-theme .auth-page::before {
   z-index: -2;
 }
 
-.auth-marquee__tilt {
+.auth-aurora {
   position: absolute;
-  left: max(-4vw, 90px);
-  bottom: max(-8vh, -110px);
-  transform-origin: left bottom;
-  transform: perspective(1000px) rotateX(10deg) rotateZ(-6deg);
+  inset: -12%;
+  filter: blur(110px) saturate(135%);
+  pointer-events: none;
 }
 
-.auth-marquee__track {
+.auth-aurora__orb {
+  position: absolute;
   display: block;
-  width: max-content;
+  border-radius: 50%;
+  opacity: 0.95;
   will-change: transform;
+}
+
+.auth-aurora__orb--one {
+  top: -10%;
+  left: -10%;
+  width: 58vw;
+  height: 58vw;
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--auth-aurora-one) 0%,
+    transparent 70%
+  );
+  animation: authAuroraDriftOne 22s ease-in-out infinite;
+}
+
+.auth-aurora__orb--two {
+  bottom: -16%;
+  right: -12%;
+  width: 62vw;
+  height: 62vw;
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--auth-aurora-two) 0%,
+    transparent 70%
+  );
+  animation: authAuroraDriftTwo 28s ease-in-out infinite;
+}
+
+.auth-aurora__orb--three {
+  top: 34%;
+  left: 36%;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--auth-aurora-three) 0%,
+    transparent 70%
+  );
+  animation: authAuroraDriftThree 34s ease-in-out infinite;
+}
+
+.auth-wordmark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1vw, 28px);
+  pointer-events: none;
+  user-select: none;
+  z-index: -1;
+}
+
+.auth-wordmark__letter {
   font-family: "Erica One", Impact, "Arial Black", system-ui, sans-serif;
   font-weight: 900;
-  font-size: clamp(260px, 54vw, 760px);
+  font-size: clamp(110px, 21vw, 360px);
+  line-height: 0.9;
   letter-spacing: 0;
-  line-height: 1.2;
-  color: var(--auth-logo-fill);
-  opacity: 1;
-  text-shadow: none;
-  filter: blur(0.2px);
-  mix-blend-mode: multiply;
+  color: var(--auth-letter-fill);
+  -webkit-text-stroke: clamp(1.5px, 0.26vw, 4px) var(--auth-letter-stroke);
+  text-shadow: 0 0 60px var(--auth-letter-glow);
+  will-change: transform, opacity, filter;
+  animation:
+    authLetterEnter 1.1s cubic-bezier(0.16, 1, 0.3, 1)
+      calc(0.15s + var(--i) * 0.14s) both,
+    authLetterWave 6s ease-in-out calc(1.25s + var(--i) * 0.35s) infinite;
 }
 
 .auth-background-glow {
@@ -425,6 +485,17 @@ html.dark-theme .auth-step-next {
   .auth-wizard-track {
     transition: none;
   }
+
+  .auth-aurora__orb,
+  .auth-wordmark__letter {
+    animation: none !important;
+  }
+
+  .auth-wordmark__letter {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
 }
 
 .auth-form label {
@@ -665,23 +736,82 @@ html.dark-theme .auth-submit.is-loading::after {
   }
 }
 
+@keyframes authAuroraDriftOne {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(8vw, 6vh) scale(1.12);
+  }
+}
+
+@keyframes authAuroraDriftTwo {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-10vw, -5vh) scale(1.15);
+  }
+}
+
+@keyframes authAuroraDriftThree {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.95);
+  }
+  50% {
+    transform: translate(4vw, -7vh) scale(1.18);
+  }
+}
+
+@keyframes authLetterEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(70px) rotate(-4deg) scale(0.92);
+    filter: blur(10px);
+  }
+  60% {
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes authLetterWave {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-16px) rotate(1deg);
+  }
+}
+
 @media (max-width: 560px) {
-  .auth-marquee__tilt {
-    left: -8vw;
-    bottom: -12vh;
-    transform: perspective(900px) rotateX(14deg) rotateZ(-8deg);
+  .auth-aurora {
+    filter: blur(80px) saturate(130%);
   }
 
-  .auth-marquee__track {
-    font-size: clamp(220px, 78vw, 620px);
-    opacity: 0.2;
+  .auth-wordmark {
+    inset: 0 0 50% 0;
+    align-items: flex-end;
+    padding-bottom: 18px;
+  }
+
+  .auth-wordmark__letter {
+    font-size: clamp(82px, 22vw, 220px);
+    -webkit-text-stroke-width: clamp(1.2px, 0.4vw, 2.6px);
   }
 
   .auth-page {
-    align-items: flex-start;
-    padding: max(12px, env(safe-area-inset-top)) 12px
-      max(16px, env(safe-area-inset-bottom));
-    padding-top: max(170px, calc(env(safe-area-inset-top) + 140px));
+    align-items: center;
+    padding: max(12px, env(safe-area-inset-top)) 14px
+      max(20px, calc(env(safe-area-inset-bottom) + 12px));
     overflow-y: auto;
     overflow-x: hidden;
   }
@@ -702,15 +832,8 @@ html.dark-theme .auth-submit.is-loading::after {
 }
 
 @media (max-width: 400px) {
-  .auth-marquee__tilt {
-    left: -10vw;
-    bottom: -14vh;
-    transform: perspective(900px) rotateX(14deg) rotateZ(-7deg);
-  }
-
-  .auth-marquee__track {
-    font-size: clamp(220px, 86vw, 560px);
-    opacity: 0.18;
+  .auth-wordmark__letter {
+    font-size: clamp(72px, 22vw, 180px);
   }
 
   .auth-page {
