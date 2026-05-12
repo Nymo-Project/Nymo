@@ -2982,9 +2982,23 @@ export class ChatAppCoreMethods {
     };
     document.addEventListener('touchmove', this.mobileTouchMoveLockHandler, { passive: false });
 
-    if (typeof this.initializeServerChatSync === 'function') {
-      this.initializeServerChatSync();
-    }
+    // Push non-critical network + sync work off the critical path so the
+    // initial render (chat list, navigation, current chat) isn't blocked by
+    // realtime/wallet setup. requestIdleCallback runs after the browser has
+    // a chance to paint; we fall back to setTimeout on older engines.
+    const scheduleIdle = (fn, timeout = 1500) => {
+      if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(fn, { timeout });
+      } else {
+        window.setTimeout(fn, 1);
+      }
+    };
+
+    scheduleIdle(() => {
+      if (typeof this.initializeServerChatSync === 'function') {
+        this.initializeServerChatSync();
+      }
+    });
 
     if (typeof this.consumeProfileQrDeepLinkFromUrl === 'function') {
       window.setTimeout(() => {
@@ -2992,7 +3006,9 @@ export class ChatAppCoreMethods {
       }, 120);
     }
 
-    this.refreshCoinWalletFromBackend({ includeTransactions: false, silent: true }).catch(() => {});
+    scheduleIdle(() => {
+      this.refreshCoinWalletFromBackend({ includeTransactions: false, silent: true }).catch(() => {});
+    });
 
   }
 

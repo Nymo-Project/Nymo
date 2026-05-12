@@ -1,9 +1,7 @@
-/* Google Fonts Import - Inter */
-@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+/* Google Fonts are loaded via <link> in index.html / auth/index.html so they
+   download in parallel with this stylesheet (rather than serially, as
+   `@import url(...)` would force). Decorative + game fonts (Orbitron, Pixelify
+   Sans, Press Start 2P) load asynchronously via `media=print; onload` swap. */
 
 /* Global Font */
 *,

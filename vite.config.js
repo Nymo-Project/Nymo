@@ -41,10 +41,26 @@ export default defineConfig(({ command }) => ({
     ...(hmrConfig ? { hmr: hmrConfig } : {})
   },
   build: {
+    // Modern targets only — drops legacy transforms and shrinks the bundle.
+    target: 'es2020',
+    cssCodeSplit: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       input: {
         main: 'index.html',
         auth: 'auth/index.html'
+      },
+      output: {
+        // Split big / rarely-used dependencies into their own chunks so the
+        // main entry stays small and the browser can cache vendor code across
+        // deploys.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('qrcode')) return 'vendor-qrcode';
+          if (id.includes('three')) return 'vendor-three';
+          return 'vendor';
+        }
       }
     }
   }
