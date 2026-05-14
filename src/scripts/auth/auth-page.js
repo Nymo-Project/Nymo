@@ -8,14 +8,20 @@ import {
 } from '../shared/auth/auth-session.js';
 import { buildApiUrl } from '../shared/api/api-url.js';
 import { applyThemeBranding } from '../shared/helpers/theme-branding.js';
+import {
+  AUTH_PHONE_COUNTRIES,
+  iso2ToFlagEmoji,
+  matchDialFromDigits,
+  getDefaultPhoneCountry
+} from './auth-phone-countries.js';
 
-const PHONE_UA_RE = /^\+380\d{9}$/;
 const REGISTER_NICKNAME_MIN_LEN = 2;
 const REGISTER_NICKNAME_MAX_LEN = 32;
 const REGISTER_NICKNAME_RE = new RegExp(
   `^[a-z]{${REGISTER_NICKNAME_MIN_LEN},${REGISTER_NICKNAME_MAX_LEN}}$`
 );
 const SIGNUP_NICKNAME_CACHE_PREFIX = 'orion_signup_nickname:';
+const authPhoneCountryPanelClosers = [];
 const OFFLINE_AUTH_USERS_KEY = 'orion_offline_auth_users_v1';
 const DEFAULT_OFFLINE_USER = {
   id: 'offline-demo-user',
@@ -59,11 +65,11 @@ function classifyIncomingNicknameChunk(text) {
 function normalizeOfflineUser(raw) {
   if (!raw || typeof raw !== 'object') return null;
   const id = safeTrim(raw.id);
-  const phone = normalizePhone(raw.phone || raw.mobile || '');
+  const phone = normalizePhoneDigits(raw.phone || raw.mobile || '');
   const password = safeTrim(raw.password);
   const nickname = safeTrim(raw.nickname || raw.name || 'Користувач Nymo');
   const name = safeTrim(raw.name || raw.nickname || nickname || 'Користувач Nymo');
-  if (!id || !PHONE_UA_RE.test(phone) || !password) return null;
+  if (!id || !isValidInternationalPhone(phone) || !password) return null;
   return {
     id,
     phone,
@@ -161,9 +167,9 @@ function isInvalidCredentialsError(error) {
 }
 
 function hasOfflineCredentialsMismatch(phone, password) {
-  const normalizedPhone = normalizePhone(phone);
+  const normalizedPhone = normalizePhoneDigits(phone);
   const safePassword = safeTrim(password);
-  if (!PHONE_UA_RE.test(normalizedPhone) || !safePassword) return false;
+  if (!isValidInternationalPhone(normalizedPhone) || !safePassword) return false;
   const users = ensureDefaultOfflineUserSeeded();
   const samePhoneUser = users.find((item) => item.phone === normalizedPhone);
   if (!samePhoneUser) return false;
@@ -171,9 +177,9 @@ function hasOfflineCredentialsMismatch(phone, password) {
 }
 
 function tryOfflineLogin(phone, password) {
-  const normalizedPhone = normalizePhone(phone);
+  const normalizedPhone = normalizePhoneDigits(phone);
   const safePassword = safeTrim(password);
-  if (!PHONE_UA_RE.test(normalizedPhone) || !safePassword) return null;
+  if (!isValidInternationalPhone(normalizedPhone) || !safePassword) return null;
   const users = ensureDefaultOfflineUserSeeded();
   const matchedUser = users.find((item) => item.phone === normalizedPhone && item.password === safePassword);
   if (!matchedUser) return null;
@@ -181,11 +187,11 @@ function tryOfflineLogin(phone, password) {
 }
 
 function createOfflineUser({ phone, password, nickname }) {
-  const normalizedPhone = normalizePhone(phone);
+  const normalizedPhone = normalizePhoneDigits(phone);
   const safePassword = safeTrim(password);
   const safeNickname = normalizeRegisterNicknameRaw(nickname);
-  if (!PHONE_UA_RE.test(normalizedPhone)) {
-    throw new Error('Введіть номер у форматі +380XXXXXXXXX.');
+  if (!isValidInternationalPhone(normalizedPhone)) {
+    throw new Error('Введіть коректний міжнародний номер телефону.');
   }
   if (safePassword.length < 6) {
     throw new Error('Пароль має містити щонайменше 6 символів.');
@@ -248,18 +254,219 @@ function getAuthUserId(authPayload) {
   return safeTrim(jwtPayload?.sub || jwtPayload?.userId || jwtPayload?.id);
 }
 
-function normalizePhone(value) {
-  let phone = safeTrim(value).replace(/[^\d+]/g, '');
+function normalizePhoneDigits(value) {
+  const raw = safeTrim(value).replace(/[^\d+]/g, '');
+  if (!raw) return '';
+  if (raw.startsWith('+')) return `+${raw.slice(1).replace(/\D/g, '')}`;
+  return `+${raw.replace(/\D/g, '')}`;
+}
 
-  if (phone.startsWith('380')) {
-    phone = `+${phone}`;
+function isValidInternationalPhone(value) {
+  const s = normalizePhoneDigits(value);
+  return /^\+[1-9]\d{6,14}$/.test(s);
+}
+
+function applyCountryToWrap(wrap, country) {
+  const btn = wrap.querySelector('[data-phone-cc]');
+  const nat = wrap.querySelector('[data-phone-national]');
+  if (!(btn instanceof HTMLButtonElement) || !(nat instanceof HTMLInputElement)) return;
+  btn.dataset.dial = country.dial;
+  btn.dataset.iso2 = country.iso2;
+  btn.dataset.nationalMax = String(country.nationalMaxLen);
+  const flag = btn.querySelector('.auth-phone-cc__flag');
+  const dialEl = btn.querySelector('.auth-phone-cc__dial');
+  if (flag) flag.textContent = iso2ToFlagEmoji(country.iso2);
+  if (dialEl) dialEl.textContent = `+${country.dial}`;
+  btn.setAttribute('aria-label', `Код країни: ${country.nameUa} +${country.dial}`);
+  const max = country.nationalMaxLen;
+  nat.maxLength = max;
+  nat.setAttribute('maxlength', String(max));
+  const digits = nat.value.replace(/\D/g, '');
+  if (digits.length > max) nat.value = digits.slice(0, max);
+}
+
+function composeE164FromPhoneWrap(wrap) {
+  if (!(wrap instanceof HTMLElement)) return '';
+  const cc = wrap.querySelector('[data-phone-cc]');
+  const nat = wrap.querySelector('[data-phone-national]');
+  if (!(cc instanceof HTMLButtonElement) || !(nat instanceof HTMLInputElement)) return '';
+  const dial = safeTrim(cc.dataset.dial || '').replace(/\D/g, '');
+  const national = safeTrim(nat.value).replace(/\D/g, '');
+  if (!dial || !national) return '';
+  return `+${dial}${national}`;
+}
+
+function readPhoneE164FromInputId(inputId) {
+  const input = document.getElementById(inputId);
+  if (!(input instanceof HTMLInputElement)) return '';
+  const wrap = input.closest('[data-phone-input]');
+  return wrap ? composeE164FromPhoneWrap(wrap) : normalizePhoneDigits(input.value);
+}
+
+function applyE164ToPhoneWrap(wrap, e164) {
+  if (!(wrap instanceof HTMLElement)) return;
+  const nat = wrap.querySelector('[data-phone-national]');
+  if (!(nat instanceof HTMLInputElement)) return;
+  const digits = safeTrim(e164).replace(/\D/g, '');
+  if (!digits) {
+    nat.value = '';
+    return;
   }
-
-  if (!phone.startsWith('+')) {
-    phone = `+${phone.replace(/\+/g, '')}`;
+  const matched = matchDialFromDigits(digits);
+  if (matched) {
+    applyCountryToWrap(wrap, matched.country);
+    nat.value = matched.nationalDigits.slice(0, matched.country.nationalMaxLen);
+  } else {
+    applyCountryToWrap(wrap, getDefaultPhoneCountry());
+    nat.value = digits;
   }
+}
 
-  return phone;
+function wireAuthPhoneCountryPickers(root) {
+  if (!(root instanceof HTMLElement)) return;
+  const wraps = root.querySelectorAll('[data-phone-input]');
+  for (const wrap of wraps) {
+    if (!(wrap instanceof HTMLElement)) continue;
+    const btn = wrap.querySelector('[data-phone-cc]');
+    const panel = wrap.querySelector('[data-phone-cc-panel]');
+    const list = wrap.querySelector('.auth-phone-cc-list');
+    const nat = wrap.querySelector('[data-phone-national]');
+    if (
+      !(btn instanceof HTMLButtonElement) ||
+      !(panel instanceof HTMLElement) ||
+      !(list instanceof HTMLUListElement) ||
+      !(nat instanceof HTMLInputElement)
+    ) {
+      continue;
+    }
+
+    let docCloser = null;
+    let resizeBound = null;
+
+    const clearPanelLayout = () => {
+      panel.style.position = '';
+      panel.style.left = '';
+      panel.style.top = '';
+      panel.style.width = '';
+      panel.style.right = '';
+      panel.style.zIndex = '';
+    };
+
+    const syncPanelLayout = () => {
+      const r = wrap.getBoundingClientRect();
+      const margin = 12;
+      const w = Math.min(r.width, window.innerWidth - margin * 2);
+      const left = Math.max(margin, Math.min(r.left, window.innerWidth - margin - w));
+      panel.style.position = 'fixed';
+      panel.style.left = `${left}px`;
+      panel.style.top = `${r.bottom + 6}px`;
+      panel.style.width = `${w}px`;
+      panel.style.right = 'auto';
+      panel.style.zIndex = '200';
+    };
+
+    const closePanel = () => {
+      panel.classList.remove('is-open');
+      panel.setAttribute('hidden', '');
+      clearPanelLayout();
+      btn.setAttribute('aria-expanded', 'false');
+      if (panel.parentNode === document.body) {
+        wrap.appendChild(panel);
+      }
+      if (resizeBound) {
+        window.removeEventListener('resize', resizeBound);
+        resizeBound = null;
+      }
+      if (docCloser) {
+        document.removeEventListener('click', docCloser, false);
+        docCloser = null;
+      }
+    };
+
+    const openPanel = () => {
+      if (panel.classList.contains('is-open')) return;
+      document.body.appendChild(panel);
+      panel.removeAttribute('hidden');
+      panel.classList.add('is-open');
+      btn.setAttribute('aria-expanded', 'true');
+      syncPanelLayout();
+      resizeBound = () => syncPanelLayout();
+      window.addEventListener('resize', resizeBound, { passive: true });
+      window.setTimeout(() => {
+        docCloser = (ev) => {
+          const t = ev.target;
+          if (!(t instanceof Node)) return;
+          if (panel.contains(t) || btn.contains(t)) return;
+          closePanel();
+        };
+        document.addEventListener('click', docCloser, false);
+      }, 0);
+    };
+
+    if (!list.dataset.populated) {
+      list.dataset.populated = '1';
+      for (const c of AUTH_PHONE_COUNTRIES) {
+        const li = document.createElement('li');
+        li.className = 'auth-phone-cc-list__item';
+        li.setAttribute('role', 'option');
+        li.tabIndex = -1;
+        li.textContent = `${iso2ToFlagEmoji(c.iso2)} ${c.nameUa} +${c.dial}`;
+        li.addEventListener('click', (e) => {
+          e.preventDefault();
+          applyCountryToWrap(wrap, c);
+          closePanel();
+          nat.focus();
+        });
+        list.appendChild(li);
+      }
+    }
+
+    wrap.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (nat.contains(t)) return;
+      const hitCc = t.closest('[data-phone-cc]') === btn;
+      const hitPhoneIcon = Boolean(t.closest('.auth-phone-combo__icon'));
+      if (!hitCc && !hitPhoneIcon) return;
+      e.stopPropagation();
+      if (panel.classList.contains('is-open')) closePanel();
+      else openPanel();
+    });
+
+    nat.addEventListener('input', () => {
+      const max = Number(nat.maxLength) || 15;
+      const next = nat.value.replace(/\D/g, '').slice(0, max);
+      if (nat.value !== next) nat.value = next;
+    });
+
+    nat.addEventListener('blur', () => {
+      const max = Number(nat.maxLength) || 15;
+      nat.value = nat.value.replace(/\D/g, '').slice(0, max);
+    });
+
+    nat.addEventListener('paste', (e) => {
+      const text = e.clipboardData?.getData('text/plain') || '';
+      if (!text.trim()) return;
+      const digits = text.replace(/\D/g, '');
+      const matched = matchDialFromDigits(digits);
+      if (matched && digits.length > matched.country.dial.length) {
+        e.preventDefault();
+        applyCountryToWrap(wrap, matched.country);
+        nat.value = matched.nationalDigits.slice(0, matched.country.nationalMaxLen);
+      }
+    });
+
+    wrap.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && panel.classList.contains('is-open')) {
+        e.preventDefault();
+        closePanel();
+        btn.focus();
+      }
+    });
+
+    applyCountryToWrap(wrap, getDefaultPhoneCountry());
+    authPhoneCountryPanelClosers.push(closePanel);
+  }
 }
 
 function setCachedSignupNickname(phone, nickname) {
@@ -475,13 +682,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const switchToRegisterBtn = document.getElementById('switchToRegister');
   const switchToLoginBtn = document.getElementById('switchToLogin');
   const passwordToggles = document.querySelectorAll('[data-toggle-password]');
-  const phoneInputs = document.querySelectorAll('[data-phone-input]');
   const dotsRoot = document.getElementById('authDots');
   const progressRoot = document.querySelector('.auth-progress');
   const brandTag = document.querySelector('.auth-brand__tag');
 
   if (!loginForm || !registerForm || !panelTitle || !themeToggle || !authFormsRoot) {
     return;
+  }
+
+  if (authPageRoot) {
+    authFormsRoot.addEventListener('focusin', () => {
+      authPageRoot.setAttribute('data-auth-forms-focus', '');
+    });
+    authFormsRoot.addEventListener('focusout', (e) => {
+      const related = e.relatedTarget;
+      if (related instanceof Node && authFormsRoot.contains(related)) return;
+      authPageRoot.removeAttribute('data-auth-forms-focus');
+    });
   }
 
   // Lock zoom interactions for the standalone auth page.
@@ -636,9 +853,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (safeMode === 'login') {
       if (step === 0) {
-        const phone = normalizePhone(document.getElementById('authLoginPhone')?.value);
-        if (!PHONE_UA_RE.test(phone)) {
-          setFeedback('Введіть номер у форматі +380XXXXXXXXX.');
+        const phone = readPhoneE164FromInputId('authLoginPhone');
+        if (!isValidInternationalPhone(phone)) {
+          setFeedback('Оберіть країну та введіть повний номер телефону.');
           return false;
         }
         return true;
@@ -662,9 +879,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     }
     if (step === 1) {
-      const phone = normalizePhone(document.getElementById('authRegisterPhone')?.value);
-      if (!PHONE_UA_RE.test(phone)) {
-        setFeedback('Введіть номер у форматі +380XXXXXXXXX.');
+      const phone = readPhoneE164FromInputId('authRegisterPhone');
+      if (!isValidInternationalPhone(phone)) {
+        setFeedback('Оберіть країну та введіть повний номер телефону.');
         return false;
       }
       return true;
@@ -739,6 +956,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const setMode = (mode, { animate = true } = {}) => {
+    for (const closePhonePanel of authPhoneCountryPanelClosers) {
+      closePhonePanel();
+    }
     state.mode = mode === 'register' ? 'register' : 'login';
     const isRegister = state.mode === 'register';
     const nextForm = isRegister ? registerForm : loginForm;
@@ -898,15 +1118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  phoneInputs.forEach((input) => {
-    if (!(input instanceof HTMLInputElement)) return;
-    input.addEventListener('focus', () => {
-      if (!input.value.trim()) input.value = '+380';
-    });
-    input.addEventListener('blur', () => {
-      input.value = normalizePhone(input.value);
-    });
-  });
+  wireAuthPhoneCountryPickers(authFormsRoot);
 
   const wireRegisterNicknameField = () => {
     const nick = document.getElementById('authRegisterNickname');
@@ -1037,11 +1249,11 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     if (state.pending) return;
 
-    const phone = normalizePhone(document.getElementById('authLoginPhone')?.value);
+    const phone = readPhoneE164FromInputId('authLoginPhone');
     const password = safeTrim(document.getElementById('authLoginPassword')?.value);
 
-    if (!PHONE_UA_RE.test(phone)) {
-      setFeedback('Введіть номер у форматі +380XXXXXXXXX.');
+    if (!isValidInternationalPhone(phone)) {
+      setFeedback('Оберіть країну та введіть повний номер телефону.');
       return;
     }
     if (!password) {
@@ -1105,7 +1317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     if (state.pending) return;
 
-    const phone = normalizePhone(document.getElementById('authRegisterPhone')?.value);
+    const phone = readPhoneE164FromInputId('authRegisterPhone');
     const nickEl = document.getElementById('authRegisterNickname');
     const nickname = normalizeRegisterNicknameRaw(nickEl?.value);
     if (nickEl instanceof HTMLInputElement) nickEl.value = nickname;
@@ -1116,8 +1328,8 @@ document.addEventListener('DOMContentLoaded', () => {
       setFeedback('Нікнейм: 2–32 символи, лише латинські малі літери від a до z.');
       return;
     }
-    if (!PHONE_UA_RE.test(phone)) {
-      setFeedback('Введіть номер у форматі +380XXXXXXXXX.');
+    if (!isValidInternationalPhone(phone)) {
+      setFeedback('Оберіть країну та введіть повний номер телефону.');
       return;
     }
     if (password.length < 6) {
@@ -1186,8 +1398,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const loginPhone = document.getElementById('authLoginPhone');
-      if (loginPhone instanceof HTMLInputElement) loginPhone.value = phone;
+      const loginWrap = document.getElementById('authLoginPhone')?.closest('[data-phone-input]');
+      if (loginWrap instanceof HTMLElement) applyE164ToPhoneWrap(loginWrap, phone);
       setMode('login');
       setFeedback('Реєстрацію завершено. Увійдіть у свій акаунт.', 'success');
     } catch (error) {
