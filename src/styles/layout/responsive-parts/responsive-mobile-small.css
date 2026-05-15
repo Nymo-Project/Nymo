@@ -182,12 +182,6 @@
 
   #settingsContainerMobile #wallet .wallet-subsection-switch {
     margin: 4px 0 8px;
-    padding: 5px;
-    gap: 5px;
-  }
-
-  #settingsContainerMobile #wallet .wallet-subsection-btn {
-    padding: 8px 10px;
   }
 
   #settingsContainerMobile .settings-menu-item,

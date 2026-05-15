@@ -1159,14 +1159,11 @@
     width: 100%;
     align-self: stretch;
     margin: 4px 0 10px;
-    padding: 6px;
-    gap: 6px;
   }
 
   #settingsContainerMobile #wallet .wallet-subsection-btn {
     flex: 1 1 0;
     min-width: 0;
-    padding: 9px 12px;
     text-align: center;
   }
 
