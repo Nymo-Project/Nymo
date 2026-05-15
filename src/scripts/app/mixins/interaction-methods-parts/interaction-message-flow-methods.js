@@ -228,7 +228,237 @@ export class ChatAppInteractionMessageFlowMethods extends ChatAppInteractionGrou
   }
 
 
+  shouldShowChatTypingBubble() {
+    if (!this.currentChat) return false;
+    if (typeof this.isChatTypingActive !== 'function' || !this.isChatTypingActive(this.currentChat)) {
+      return false;
+    }
+    const chatServerId = typeof this.resolveChatServerId === 'function'
+      ? this.resolveChatServerId(this.currentChat)
+      : '';
+    if (!chatServerId || !(this.realtimeTypingByChatId instanceof Map)) return false;
+    const state = this.realtimeTypingByChatId.get(chatServerId);
+    if (!state?.active) return false;
+    const selfId = typeof this.getAuthUserId === 'function' ? this.getAuthUserId() : '';
+    const typingUserId = String(state.userId || '').trim();
+    if (typingUserId && selfId && typingUserId === selfId) return false;
+    return true;
+  }
+
+
+  getActiveChatTypingPeerMeta() {
+    if (!this.currentChat) return null;
+    const chatServerId = typeof this.resolveChatServerId === 'function'
+      ? this.resolveChatServerId(this.currentChat)
+      : '';
+    const state = this.realtimeTypingByChatId instanceof Map && chatServerId
+      ? this.realtimeTypingByChatId.get(chatServerId)
+      : null;
+    const senderId = String(
+      state?.userId
+      || this.currentChat.participantId
+      || ''
+    ).trim();
+    if (typeof this.getMessageSenderDisplayMeta !== 'function') {
+      return {
+        name: this.currentChat.name || 'Користувач',
+        avatarImage: '',
+        avatarColor: this.getContactColor?.(this.currentChat.name || 'Користувач') || '#6b7280',
+        initials: this.getInitials?.(this.currentChat.name || 'Користувач') || '?'
+      };
+    }
+    return this.getMessageSenderDisplayMeta({ senderId }, this.currentChat);
+  }
+
+
+  cancelPendingMessagesBottomSyncTimers() {
+    if (Array.isArray(this.messagesBottomSyncTimers)) {
+      this.messagesBottomSyncTimers.forEach((timerId) => clearTimeout(timerId));
+      this.messagesBottomSyncTimers = [];
+    }
+  }
+
+
+  preserveMessagesScrollPosition(messagesContainer, mutateFn) {
+    if (!(messagesContainer instanceof HTMLElement)) {
+      mutateFn?.();
+      return;
+    }
+    const scrollTop = messagesContainer.scrollTop;
+    mutateFn?.();
+    const restore = () => {
+      messagesContainer.scrollTop = scrollTop;
+    };
+    window.requestAnimationFrame(() => {
+      restore();
+      window.requestAnimationFrame(restore);
+    });
+  }
+
+
+  clearChatTypingIndicator() {
+    const legacyHost = document.getElementById('chatTypingIndicatorHost');
+    if (legacyHost instanceof HTMLElement) {
+      legacyHost.replaceChildren();
+      legacyHost.hidden = true;
+    }
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (!messagesContainer) return;
+    messagesContainer.classList.remove('has-typing-indicator');
+    messagesContainer.style.removeProperty('--messages-typing-inset');
+    messagesContainer.querySelectorAll('[data-typing-indicator="true"], .messages-typing-tail').forEach((node) => node.remove());
+  }
+
+
+  syncChatTypingIndicator({ scroll = false, forceReveal = false } = {}) {
+    const messagesContainer = document.getElementById('messagesContainer');
+    if (!messagesContainer) return;
+
+    const legacyHost = document.getElementById('chatTypingIndicatorHost');
+    if (legacyHost instanceof HTMLElement) {
+      legacyHost.replaceChildren();
+      legacyHost.hidden = true;
+    }
+
+    const existing = messagesContainer.querySelector('[data-typing-indicator="true"]');
+    const shouldShow = this.shouldShowChatTypingBubble();
+
+    if (!shouldShow) {
+      this.cancelPendingMessagesBottomSyncTimers();
+      this.preserveMessagesScrollPosition(messagesContainer, () => {
+        this.clearChatTypingIndicator();
+      });
+      const hasMessages = Array.isArray(this.currentChat?.messages) && this.currentChat.messages.length > 0;
+      if (!hasMessages && typeof this.renderChat === 'function') {
+        this.renderChat();
+      }
+      return;
+    }
+
+    const emptyEl = messagesContainer.querySelector('.chat-empty-state');
+    if (emptyEl) emptyEl.remove();
+    messagesContainer.classList.remove('no-content');
+    messagesContainer.classList.add('has-content', 'has-typing-indicator');
+    if (typeof this.ensureMessagesBottomSpacer === 'function') {
+      this.ensureMessagesBottomSpacer(messagesContainer);
+    }
+
+    const wasNearBottom = typeof this.isMessagesNearBottom === 'function'
+      ? this.isMessagesNearBottom(messagesContainer, 280)
+      : false;
+    const pinToBottom = typeof this.shouldKeepCurrentChatPinnedToBottom === 'function'
+      ? this.shouldKeepCurrentChatPinnedToBottom()
+      : false;
+    const shouldRevealTyping = Boolean(forceReveal || scroll || wasNearBottom || pinToBottom);
+
+    if (existing) {
+      messagesContainer.appendChild(existing);
+      this.scheduleRevealTypingIndicator(messagesContainer, shouldRevealTyping);
+      return;
+    }
+
+    const senderMeta = this.getActiveChatTypingPeerMeta();
+    if (!senderMeta) return;
+
+    const avatarHtml = typeof this.getChatAvatarHtml === 'function'
+      ? this.getChatAvatarHtml(senderMeta, 'message-avatar')
+      : '';
+    const senderNameHtml = this.currentChat?.isGroup && senderMeta.name
+      ? `<div class="message-sender-name">${typeof this.escapeHtml === 'function' ? this.escapeHtml(senderMeta.name) : senderMeta.name}</div>`
+      : '';
+
+    const typingEl = document.createElement('div');
+    typingEl.className = 'message other message-typing-indicator new-message';
+    typingEl.dataset.typingIndicator = 'true';
+    typingEl.setAttribute('aria-live', 'polite');
+    typingEl.setAttribute('aria-label', this.translateUiText?.('друкує') || 'друкує');
+    typingEl.innerHTML = `
+      ${avatarHtml}
+      <div class="message-bubble">
+        ${senderNameHtml}
+        <div class="message-content typing-indicator-content with-tail">
+          <span class="typing-dots" aria-hidden="true">
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+          </span>
+        </div>
+      </div>
+    `;
+
+    messagesContainer.appendChild(typingEl);
+    this.scheduleRevealTypingIndicator(messagesContainer, shouldRevealTyping);
+    window.setTimeout(() => {
+      typingEl.classList.remove('new-message');
+      if (shouldRevealTyping) {
+        this.revealChatTypingIndicator(messagesContainer);
+      }
+    }, 420);
+  }
+
+
+  scheduleRevealTypingIndicator(messagesContainer, shouldReveal = false) {
+    if (!(messagesContainer instanceof HTMLElement) || !shouldReveal) return;
+    window.requestAnimationFrame(() => {
+      this.revealChatTypingIndicator(messagesContainer);
+    });
+  }
+
+
+  revealChatTypingIndicator(messagesContainer) {
+    if (!(messagesContainer instanceof HTMLElement)) return;
+    this.cancelPendingMessagesBottomSyncTimers();
+
+    const applyReveal = () => {
+      const typingEl = messagesContainer.querySelector('[data-typing-indicator="true"]');
+      const inputArea = document.querySelector('.message-input-area');
+
+      if (!(typingEl instanceof HTMLElement)) {
+        messagesContainer.scrollTop = Math.max(0, messagesContainer.scrollHeight - messagesContainer.clientHeight);
+        this.updateMessagesScrollBottomButtonVisibility?.();
+        return;
+      }
+
+      const containerRect = messagesContainer.getBoundingClientRect();
+      let visibleBottom = containerRect.bottom;
+      if (inputArea instanceof HTMLElement) {
+        visibleBottom = Math.min(visibleBottom, inputArea.getBoundingClientRect().top);
+      }
+
+      const targetGap = 10;
+      const typingRect = typingEl.getBoundingClientRect();
+      const overflow = Math.ceil(typingRect.bottom - (visibleBottom - targetGap));
+
+      if (overflow !== 0) {
+        messagesContainer.scrollTop += overflow;
+      }
+
+      this.updateMessagesScrollBottomButtonVisibility?.();
+    };
+
+    applyReveal();
+    window.requestAnimationFrame(applyReveal);
+  }
+
+
+  scrollChatToTypingIndicator(messagesContainer) {
+    if (!(messagesContainer instanceof HTMLElement)) return;
+    const shouldReveal = typeof this.shouldKeepCurrentChatPinnedToBottom === 'function'
+      ? this.shouldKeepCurrentChatPinnedToBottom()
+      : (
+        typeof this.isMessagesNearBottom === 'function'
+          ? this.isMessagesNearBottom(messagesContainer, 280)
+          : false
+      );
+    if (!shouldReveal) return;
+    this.revealChatTypingIndicator(messagesContainer);
+  }
+
+
   clearMessages() {
+    if (typeof this.clearChatTypingIndicator === 'function') {
+      this.clearChatTypingIndicator();
+    }
     const messagesContainer = document.getElementById('messagesContainer');
     if (!messagesContainer) return;
     messagesContainer.innerHTML = '';

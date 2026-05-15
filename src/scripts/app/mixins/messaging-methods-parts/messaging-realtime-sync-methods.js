@@ -336,6 +336,7 @@ export class ChatAppMessagingRealtimeSyncMethods extends ChatAppMessagingChatApi
       this.realtimeTypingByChatId.delete(safeChatId);
       this.updateChatHeader();
       this.renderChatsList();
+      this.syncTypingIndicatorForChat(safeChatId, false);
       return;
     }
 
@@ -361,6 +362,17 @@ export class ChatAppMessagingRealtimeSyncMethods extends ChatAppMessagingChatApi
       this.updateChatHeader();
       this.renderChatsList();
     }
+    this.syncTypingIndicatorForChat(safeChatId);
+  }
+
+
+  syncTypingIndicatorForChat(chatServerId, forceReveal = false) {
+    const safeChatId = String(chatServerId || '').trim();
+    if (!safeChatId || !this.currentChat) return;
+    const currentChatServerId = this.resolveChatServerId(this.currentChat);
+    if (!currentChatServerId || String(currentChatServerId).trim() !== safeChatId) return;
+    if (typeof this.syncChatTypingIndicator !== 'function') return;
+    this.syncChatTypingIndicator({ forceReveal: Boolean(forceReveal) });
   }
 
 

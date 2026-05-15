@@ -938,6 +938,9 @@ export class ChatAppInteractionChatProfileMethods extends ChatAppInteractionEven
     if (typeof this.clearLastActiveChatSession === 'function') {
       this.clearLastActiveChatSession();
     }
+    if (typeof this.clearChatTypingIndicator === 'function') {
+      this.clearChatTypingIndicator();
+    }
     document.getElementById('messageInput').value = '';
     this.resizeMessageInput();
     this.renderChatsList();
@@ -1168,7 +1171,16 @@ export class ChatAppInteractionChatProfileMethods extends ChatAppInteractionEven
 
     if (!this.currentChat) return;
 
+    const showTypingBubble = typeof this.shouldShowChatTypingBubble === 'function'
+      && this.shouldShowChatTypingBubble();
+
     if (!this.currentChat.messages || this.currentChat.messages.length === 0) {
+      if (showTypingBubble) {
+        if (typeof this.syncChatTypingIndicator === 'function') {
+          this.syncChatTypingIndicator({ forceReveal: this.skipNextRenderChatAutoScroll !== true });
+        }
+        return;
+      }
       const emptyEl = document.createElement('div');
       emptyEl.className = 'chat-empty-state';
       emptyEl.innerHTML = `
@@ -1277,13 +1289,17 @@ export class ChatAppInteractionChatProfileMethods extends ChatAppInteractionEven
       messagesContainer.appendChild(messageEl);
     });
 
+    const shouldAutoScroll = this.skipNextRenderChatAutoScroll !== true;
+    this.skipNextRenderChatAutoScroll = false;
+
+    if (typeof this.syncChatTypingIndicator === 'function') {
+      this.syncChatTypingIndicator({ forceReveal: shouldAutoScroll });
+    }
+
     this.bindMessageContextMenu();
     this.initMessageImageTransitions(messagesContainer);
     this.initVoiceMessageElements(messagesContainer);
     this.syncDateSeparatorToChatInfo(messagesContainer);
-
-    const shouldAutoScroll = this.skipNextRenderChatAutoScroll !== true;
-    this.skipNextRenderChatAutoScroll = false;
 
     if (shouldAutoScroll) {
       if (typeof this.enableMessagesMediaAutoScroll === 'function') {
@@ -1291,7 +1307,12 @@ export class ChatAppInteractionChatProfileMethods extends ChatAppInteractionEven
       }
       // Auto-scroll to bottom
       setTimeout(() => {
-        if (typeof this.syncMessagesContainerToBottom === 'function') {
+        if (
+          messagesContainer.classList.contains('has-typing-indicator')
+          && typeof this.revealChatTypingIndicator === 'function'
+        ) {
+          this.revealChatTypingIndicator(messagesContainer);
+        } else if (typeof this.syncMessagesContainerToBottom === 'function') {
           this.syncMessagesContainerToBottom(messagesContainer);
         } else {
           messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1416,7 +1437,7 @@ export class ChatAppInteractionChatProfileMethods extends ChatAppInteractionEven
 
     messagesContainer.addEventListener('contextmenu', (e) => {
       const messageEl = e.target.closest('.message');
-      if (!messageEl) return;
+      if (!messageEl || messageEl.dataset.typingIndicator === 'true') return;
       e.preventDefault();
       openMenu(messageEl, e.clientX, e.clientY);
     });
@@ -1426,7 +1447,7 @@ export class ChatAppInteractionChatProfileMethods extends ChatAppInteractionEven
     let activePressPoint = null;
     messagesContainer.addEventListener('touchstart', (e) => {
       const messageEl = e.target.closest('.message');
-      if (!messageEl) return;
+      if (!messageEl || messageEl.dataset.typingIndicator === 'true') return;
       activePressMessage = messageEl;
       const touch = e.touches && e.touches[0];
       activePressPoint = touch

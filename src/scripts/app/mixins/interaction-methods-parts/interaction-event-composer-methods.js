@@ -1429,7 +1429,14 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
     appEl.style.setProperty('--keyboard-inset', `${keyboardHeight}px`);
 
     if (messages) {
-      messages.style.setProperty('padding-bottom', '12px');
+      if (messages.classList.contains('has-typing-indicator')) {
+        messages.style.removeProperty('padding-bottom');
+        if (typeof this.revealChatTypingIndicator === 'function') {
+          this.revealChatTypingIndicator(messages);
+        }
+      } else {
+        messages.style.setProperty('padding-bottom', '12px');
+      }
     }
 
     this.ensureMobileMessagesAnchoredToBottom();

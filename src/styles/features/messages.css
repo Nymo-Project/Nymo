@@ -1,3 +1,4 @@
 @import './messages-parts/messages-core.css';
+@import './messages-parts/messages-typing.css';
 @import './messages-parts/messages-media.css';
 @import './messages-parts/messages-state-edited.css';
