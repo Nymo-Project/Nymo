@@ -335,6 +335,9 @@ export class ChatAppMessagingRealtimeSyncMethods extends ChatAppMessagingChatApi
     this.saveChats();
     this.updateChatHeader();
     this.renderChatsList();
+    if (typeof this.refreshDesktopSecondaryChatsListIfVisible === 'function') {
+      this.refreshDesktopSecondaryChatsListIfVisible();
+    }
     if (typeof this.updateCurrentContactProfileStatusLabel === 'function') {
       this.updateCurrentContactProfileStatusLabel();
     }

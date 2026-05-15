@@ -140,7 +140,7 @@
 
   .sidebar.compact
     .desktop-secondary-menu.active[data-menu-root="navChats"]
-    .desktop-secondary-chat-avatar.is-image
+    .desktop-secondary-chat-avatar
     .avatar-activity-indicator {
     width: 10px;
     height: 10px;

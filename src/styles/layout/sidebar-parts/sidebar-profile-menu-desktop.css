@@ -1008,7 +1008,7 @@ html.dark-theme .bottom-nav-indicator {
     overflow: visible;
   }
 
-  .desktop-secondary-chat-avatar.is-image .avatar-activity-indicator {
+  .desktop-secondary-chat-avatar .avatar-activity-indicator {
     position: absolute;
     right: -1px;
     bottom: -1px;
@@ -1019,10 +1019,11 @@ html.dark-theme .bottom-nav-indicator {
     border: 2px solid color-mix(in srgb, var(--bg-color) 88%, transparent);
     box-shadow: 0 0 0 1px rgba(10, 14, 24, 0.34);
     pointer-events: none;
+    z-index: 2;
   }
 
   html:not(.dark-theme)
-    .desktop-secondary-chat-avatar.is-image
+    .desktop-secondary-chat-avatar
     .avatar-activity-indicator {
     border-color: rgba(255, 255, 255, 0.96);
     box-shadow: 0 0 0 1px rgba(15, 19, 32, 0.14);

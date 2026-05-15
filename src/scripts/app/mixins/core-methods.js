@@ -2439,14 +2439,18 @@ export class ChatAppCoreMethods {
     const { avatarImage, avatarColor, initials } = this.getChatAvatarMeta(chat);
     const isDesktopSecondaryAvatar = String(className || '').includes('desktop-secondary-chat-avatar');
     const isChatListAvatar = String(className || '').includes('chat-avatar');
-    const chatStatus = String(chat?.status || '').trim().toLowerCase();
-    const normalizedStatus = typeof this.normalizePresenceStatus === 'function'
-      ? this.normalizePresenceStatus(chat?.status || chatStatus)
-      : chatStatus;
+    const isParticipantOnline = !chat?.isGroup && (
+      typeof this.isDirectChatParticipantOnline === 'function'
+        ? this.isDirectChatParticipantOnline(chat)
+        : (
+          typeof this.normalizePresenceStatus === 'function'
+            ? this.normalizePresenceStatus(chat?.status) === 'online'
+            : String(chat?.status || '').trim().toLowerCase() === 'online'
+        )
+    );
     const showActivityIndicator = Boolean(
       (isDesktopSecondaryAvatar || isChatListAvatar)
-      && !chat?.isGroup
-      && normalizedStatus === 'online'
+      && isParticipantOnline
     );
     const activityIndicatorHtml = showActivityIndicator
       ? '<span class="avatar-activity-indicator online" aria-hidden="true"></span>'
