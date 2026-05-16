@@ -209,7 +209,7 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
           const targetId = item.dataset.navTarget;
           if (!targetId) return;
           if (targetId === 'navFaq') {
-            window.open('https://toodyann.github.io/Nymo-Support/', '_blank', 'noopener,noreferrer');
+            window.open('https://nymo-project.github.io/Nymo-Support/', '_blank', 'noopener,noreferrer');
             return;
           }
           if (window.innerWidth > 768) {

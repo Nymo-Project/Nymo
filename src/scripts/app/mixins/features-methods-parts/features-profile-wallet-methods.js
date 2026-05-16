@@ -2404,7 +2404,7 @@ export class ChatAppFeaturesProfileWalletMethods extends ChatAppFeaturesShopMeth
 
   showSettingsSubsection(subsectionName, settingsContainerId, sourceSection = null) {
     if (subsectionName === 'faq') {
-      window.open('https://toodyann.github.io/Nymo-Support/', '_blank', 'noopener,noreferrer');
+      window.open('https://nymo-project.github.io/Nymo-Support/', '_blank', 'noopener,noreferrer');
       return;
     }
     const sectionMap = {
