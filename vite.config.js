@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { defineConfig } from 'vite';
 
 function normalizeBasePath(value = '') {
@@ -32,7 +34,59 @@ const hmrConfig = hasCustomHmrConfig
     }
   : undefined;
 
+function buildPwaManifest(basePath) {
+  const base = normalizeBasePath(basePath) || '/';
+  const iconQuery = '?v=3';
+  return {
+    name: 'Nymo',
+    short_name: 'Nymo',
+    id: base,
+    description: 'Nymo messenger as an installable progressive web app.',
+    lang: 'uk',
+    start_url: base,
+    scope: base,
+    display: 'standalone',
+    display_override: ['window-controls-overlay', 'standalone', 'minimal-ui'],
+    orientation: 'portrait',
+    background_color: '#050505',
+    theme_color: '#050505',
+    prefer_related_applications: false,
+    categories: ['communication', 'social', 'productivity'],
+    icons: [
+      {
+        src: `${base}pwa/icon-192.png${iconQuery}`,
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any maskable'
+      },
+      {
+        src: `${base}pwa/icon-512.png${iconQuery}`,
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any maskable'
+      }
+    ]
+  };
+}
+
+function nymoPwaManifestPlugin(basePath) {
+  return {
+    name: 'nymo-pwa-manifest',
+    apply: 'build',
+    closeBundle() {
+      const outDir = path.resolve(process.cwd(), 'dist');
+      const manifestPath = path.join(outDir, 'manifest.webmanifest');
+      fs.writeFileSync(
+        manifestPath,
+        `${JSON.stringify(buildPwaManifest(basePath), null, 2)}\n`,
+        'utf8'
+      );
+    }
+  };
+}
+
 export default defineConfig(({ command }) => ({
+  plugins: command === 'build' ? [nymoPwaManifestPlugin(pagesBase)] : [],
   base: command === 'build' ? pagesBase : '/',
   server: {
     host: '0.0.0.0',

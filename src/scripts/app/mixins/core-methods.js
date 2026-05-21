@@ -78,7 +78,8 @@ export class ChatAppCoreMethods {
       const userId = String(data.id || data.userId || data._id || '').trim();
       return {
         id: userId,
-        name: data.name || 'Користувач Nymo',
+        name: data.name || data.nickname || 'Користувач Nymo',
+        nickname: String(data.nickname || data.name || '').trim(),
         email: data.email || 'user@example.com',
         status: data.status || 'online',
         bio: data.bio || 'Вітаю!',
@@ -99,6 +100,7 @@ export class ChatAppCoreMethods {
     return {
       id: '',
       name: 'Користувач Nymo',
+      nickname: '',
       email: 'user@example.com',
       status: 'online',
       bio: 'Вітаю!',
@@ -2362,17 +2364,38 @@ export class ChatAppCoreMethods {
     this.applyChatBackground(root);
   }
 
+  getRailAccountDisplayLabel() {
+    const user = this.user && typeof this.user === 'object' ? this.user : {};
+    if (typeof this.getUserDisplayName === 'function') {
+      return this.getUserDisplayName(user);
+    }
+    const nickname = String(user.nickname || '').trim();
+    const name = String(user.name || '').trim();
+    return nickname || name || 'Користувач Nymo';
+  }
+
   updateProfileMenuButton() {
     const navProfile = document.getElementById('navProfile');
     const avatarEl = navProfile?.querySelector('.nav-avatar');
     const railAvatarEl = document.getElementById('desktopRailAccountAvatar');
     const moreAvatarEl = document.getElementById('bottomNavMoreAvatar');
+    const railAccountBtn = document.getElementById('desktopRailAccountBtn');
+    const railAccountLabel = document.getElementById('desktopRailAccountLabel');
 
-    const name = this.user?.name || 'Користувач Nymo';
+    const displayLabel = this.getRailAccountDisplayLabel();
+    const avatarName = String(this.user?.name || displayLabel).trim() || displayLabel;
 
-    this.applyUserAvatarToElement(avatarEl, name);
-    this.applyUserAvatarToElement(railAvatarEl, name);
-    this.applyUserAvatarToElement(moreAvatarEl, name);
+    this.applyUserAvatarToElement(avatarEl, avatarName);
+    this.applyUserAvatarToElement(railAvatarEl, avatarName);
+    this.applyUserAvatarToElement(moreAvatarEl, avatarName);
+
+    if (railAccountLabel) {
+      railAccountLabel.textContent = displayLabel;
+    }
+    if (railAccountBtn) {
+      railAccountBtn.title = displayLabel;
+      railAccountBtn.setAttribute('aria-label', displayLabel);
+    }
   }
 
   getInitials(name) {

@@ -60,7 +60,7 @@ export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfile
   }
 
 
-  async showSettings(sectionName) {
+  async showSettings(sectionName, options = {}) {
     this.disposeShopGarageViewer();
     if (sectionName !== 'wallet') {
       this.switchWalletActiveView = null;
@@ -90,6 +90,10 @@ export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfile
     }
     const settingsContainerId = isMobile ? 'settingsContainerMobile' : 'settingsContainer';
     const settingsContainer = document.getElementById(settingsContainerId);
+
+    if (!isMobile && typeof this.syncDesktopNavigationForSettingsSection === 'function') {
+      this.syncDesktopNavigationForSettingsSection(sectionName, options);
+    }
 
     const forceHideGlobalOverlay = (overlayEl, { ariaHidden = true } = {}) => {
       if (!(overlayEl instanceof HTMLElement)) return;
@@ -384,7 +388,7 @@ export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfile
         }
         if (profileWalletBtn) {
           profileWalletBtn.addEventListener('click', () => {
-            this.settingsParentSection = 'profile';
+            this.settingsParentSection = 'wallet';
             this.showSettings('wallet');
           });
         }
@@ -536,6 +540,9 @@ export class ChatAppFeaturesSettingsAvatarMethods extends ChatAppFeaturesProfile
               this.updatePwaControls(this.activePwaSettingsContainer);
             }
           };
+          window.addEventListener('nymo:pwa-installable-change', syncPwaState);
+          window.addEventListener('nymo:pwa-update-change', syncPwaState);
+          window.addEventListener('nymo:pwa-installed', syncPwaState);
           window.addEventListener('orion:pwa-installable-change', syncPwaState);
           window.addEventListener('orion:pwa-update-change', syncPwaState);
           window.addEventListener('orion:pwa-installed', syncPwaState);

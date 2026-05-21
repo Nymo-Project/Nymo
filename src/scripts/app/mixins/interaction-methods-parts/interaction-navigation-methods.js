@@ -1211,6 +1211,108 @@ export class ChatAppInteractionNavigationMethods {
   }
 
 
+  resolveDesktopNavTargetForSettingsSection(sectionName = '', options = {}) {
+    const section = String(sectionName || '').trim();
+    const sourceSection = String(options.sourceSection || '').trim();
+    const parentSection = String(
+      options.parentSection || sourceSection || this.settingsParentSection || ''
+    ).trim();
+
+    const standaloneNav = {
+      profile: 'navProfile',
+      'profile-settings': 'navProfile',
+      wallet: 'navWallet',
+      'messenger-settings': 'navShop',
+      'mini-games': 'navGames',
+      calls: 'navCalls',
+      'notifications-center': 'navCalls',
+      'settings-home': 'navSettings',
+      'mobile-sections': 'navExplore',
+      'group-create': 'navChats'
+    };
+    if (standaloneNav[section]) return standaloneNav[section];
+
+    if (section === 'profile-items') {
+      const itemsScope = String(this.pendingProfileItemsScope || '').trim();
+      if (itemsScope === 'games' || parentSection === 'mini-games') return 'navGames';
+      return 'navProfile';
+    }
+
+    const parentNav = {
+      profile: 'navProfile',
+      'settings-home': 'navSettings',
+      'messenger-settings': 'navShop',
+      'mini-games': 'navGames',
+      wallet: 'navWallet',
+      'mobile-sections': 'navExplore'
+    };
+    return parentNav[parentSection] || 'navSettings';
+  }
+
+
+  buildDesktopSecondaryMenuActiveCriteria(sectionName = '', options = {}) {
+    const section = String(sectionName || '').trim();
+    const criteria = { section };
+
+    if (section === 'wallet') {
+      const pendingView = String(this.pendingWalletView || '').trim().toLowerCase();
+      const activeView = String(this.walletActiveView || '').trim().toLowerCase();
+      criteria.walletView = pendingView === 'analytics' || activeView === 'analytics'
+        ? 'analytics'
+        : 'ledger';
+    }
+
+    if (section === 'mini-games') {
+      criteria.miniGameView = String(this.pendingMiniGameView || 'tapper').trim() || 'tapper';
+    }
+
+    if (section === 'messenger-settings') {
+      criteria.shopCategory = String(this.pendingShopCategory || 'all').trim() || 'all';
+    }
+
+    if (section === 'profile-items') {
+      const itemsScope = String(this.pendingProfileItemsScope || '').trim();
+      if (itemsScope === 'games' || this.settingsParentSection === 'mini-games') {
+        criteria.parentSection = 'mini-games';
+      }
+    }
+
+    const parentSection = String(
+      options.parentSection || options.sourceSection || this.settingsParentSection || ''
+    ).trim();
+    if (parentSection && section !== 'wallet' && section !== 'mini-games' && section !== 'messenger-settings') {
+      criteria.parentSection = parentSection;
+    }
+
+    return criteria;
+  }
+
+
+  syncDesktopNavigationForSettingsSection(sectionName = '', options = {}) {
+    if (window.innerWidth <= 768) return;
+
+    const targetNavId = this.resolveDesktopNavTargetForSettingsSection(sectionName, options);
+    if (!targetNavId) return;
+
+    if (typeof this.openDesktopSecondaryMenu === 'function') {
+      this.openDesktopSecondaryMenu(targetNavId, { activateFirst: false });
+    }
+
+    const targetButton = document.getElementById(targetNavId);
+    if (targetButton && typeof this.setActiveNavButton === 'function') {
+      this.setActiveNavButton(targetButton);
+    } else if (typeof this.syncDesktopNavRailActive === 'function') {
+      this.syncDesktopNavRailActive(targetNavId);
+    }
+
+    if (typeof this.syncDesktopSecondaryMenuActiveItem === 'function') {
+      this.syncDesktopSecondaryMenuActiveItem(
+        this.buildDesktopSecondaryMenuActiveCriteria(sectionName, options)
+      );
+    }
+  }
+
+
   syncDesktopSecondaryMenuActiveItem(criteria = {}) {
     const list = document.getElementById('desktopSecondaryMenuList');
     if (!list) return;

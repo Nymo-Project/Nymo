@@ -1,10 +1,10 @@
-const SHELL_CACHE = 'nymo-shell-v10';
-const RUNTIME_CACHE = 'nymo-runtime-v10';
+const SHELL_CACHE = 'nymo-shell-v11';
+const RUNTIME_CACHE = 'nymo-runtime-v11';
 const APP_SHELL_FILES = [
   './',
   './index.html',
   './auth/index.html',
-  './manifest.webmanifest?v=3',
+  './manifest.webmanifest?v=4',
   './pwa/icon-192.png?v=3',
   './pwa/icon-512.png?v=3',
   './pwa/favicon-dark.png?v=3',

@@ -2421,59 +2421,10 @@ export class ChatAppFeaturesProfileWalletMethods extends ChatAppFeaturesShopMeth
       'calls': 'calls'
     };
 
-    const resolveDesktopNavTarget = () => {
-      const navMap = {
-        'notifications': 'navSettings',
-        'privacy': 'navSettings',
-        'messages': 'navSettings',
-        'appearance': 'navSettings',
-        'language': 'navSettings',
-        'wallet': 'navWallet',
-        'messenger-settings': 'navShop',
-        'mini-games': 'navGames',
-        'notifications-center': 'navCalls',
-        'calls': 'navCalls',
-        'profile-items': sourceSection === 'mini-games' ? 'navGames' : 'navProfile'
-      };
-      return navMap[subsectionName] || null;
-    };
-    
     const sectionName = sectionMap[subsectionName];
     if (sectionName) {
-      const isDesktop = window.innerWidth > 768;
-      if (isDesktop) {
-        const targetNavId = resolveDesktopNavTarget();
-        if (targetNavId && typeof this.openDesktopSecondaryMenu === 'function') {
-          this.openDesktopSecondaryMenu(targetNavId, { activateFirst: false });
-        }
-        if (targetNavId && typeof this.syncDesktopNavRailActive === 'function') {
-          this.syncDesktopNavRailActive(targetNavId);
-        }
-        if (targetNavId && typeof this.syncDesktopSecondaryMenuActiveItem === 'function') {
-          const activeCriteria = {
-            section: sectionName
-          };
-          if (sectionName === 'wallet') {
-            const pendingView = String(this.pendingWalletView || '').trim().toLowerCase();
-            const activeView = String(this.walletActiveView || '').trim().toLowerCase();
-            activeCriteria.walletView = pendingView === 'analytics' || activeView === 'analytics'
-              ? 'analytics'
-              : 'ledger';
-          }
-          if (sectionName === 'mini-games') {
-            activeCriteria.miniGameView = 'tapper';
-          }
-          if (sectionName === 'messenger-settings') {
-            activeCriteria.shopCategory = 'all';
-          }
-          if (sectionName === 'profile-items' && sourceSection === 'mini-games') {
-            activeCriteria.parentSection = 'mini-games';
-          }
-          this.syncDesktopSecondaryMenuActiveItem(activeCriteria);
-        }
-      }
       this.settingsParentSection = sourceSection || this.settingsParentSection || 'messenger-settings';
-      this.showSettings(sectionName);
+      this.showSettings(sectionName, { sourceSection });
     }
   }
 

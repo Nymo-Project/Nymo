@@ -67,6 +67,10 @@ function normalizeBasePath() {
   return rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
 }
 
+export function getAppBasePath() {
+  return normalizeBasePath();
+}
+
 export function getAppHomeHref() {
   if (typeof window === 'undefined') return '/';
   return new URL(normalizeBasePath(), window.location.origin).href;

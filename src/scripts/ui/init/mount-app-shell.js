@@ -1,14 +1,5 @@
 import { localizeUiMarkup, resolveUiLanguage } from '../../shared/i18n/ui-localization.js';
-
-function getAppBasePath() {
-  const envBase = typeof import.meta.env?.BASE_URL === 'string'
-    ? String(import.meta.env.BASE_URL || '').trim()
-    : '';
-  if (envBase) {
-    return envBase.endsWith('/') ? envBase : `${envBase}/`;
-  }
-  return '/';
-}
+import { getAppBasePath } from '../../shared/auth/auth-session.js';
 
 function resolvePreferredThemeMode() {
   if (document.documentElement.classList.contains('dark-theme')) return 'dark';
@@ -176,11 +167,11 @@ export function mountAppShell() {
         <span class="desktop-nav-rail-label">FAQ та допомога</span>
       </button>
       <div class="desktop-nav-rail-account-wrap">
-        <button class="desktop-nav-rail-account-btn" id="desktopRailAccountBtn" type="button" title="Акаунт" aria-label="Акаунт" aria-haspopup="menu" aria-expanded="false">
+        <button class="desktop-nav-rail-account-btn" id="desktopRailAccountBtn" type="button" title="Користувач Nymo" aria-label="Користувач Nymo" aria-haspopup="menu" aria-expanded="false">
           <span class="desktop-nav-rail-item-icon desktop-nav-rail-item-icon--avatar" aria-hidden="true">
             <span class="nav-avatar desktop-nav-rail-account-avatar" id="desktopRailAccountAvatar"></span>
           </span>
-          <span class="desktop-nav-rail-label">Акаунт</span>
+          <span class="desktop-nav-rail-label" id="desktopRailAccountLabel">Користувач Nymo</span>
         </button>
       </div>
     </nav>

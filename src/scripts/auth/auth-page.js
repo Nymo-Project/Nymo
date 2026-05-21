@@ -9,6 +9,10 @@ import {
 import { buildApiUrl } from '../shared/api/api-url.js';
 import { applyThemeBranding } from '../shared/helpers/theme-branding.js';
 import {
+  bindNymoPwaLifecycleEvents,
+  registerNymoServiceWorker
+} from '../shared/pwa/service-worker-lifecycle.js';
+import {
   AUTH_PHONE_COUNTRIES,
   iso2ToFlagEmoji,
   matchDialFromDigits,
@@ -662,6 +666,11 @@ function buildAuthorizedHeaders(userId, { json = false } = {}) {
   if (safeUserId) headers['X-User-Id'] = safeUserId;
   return headers;
 }
+
+bindNymoPwaLifecycleEvents();
+window.addEventListener('load', () => {
+  registerNymoServiceWorker().catch(() => {});
+}, { once: true });
 
 document.addEventListener('DOMContentLoaded', () => {
   ensureDefaultOfflineUserSeeded();

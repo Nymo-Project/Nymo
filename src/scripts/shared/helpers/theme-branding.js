@@ -1,12 +1,4 @@
-function getAppBasePath() {
-  const envBase = typeof import.meta.env?.BASE_URL === 'string'
-    ? String(import.meta.env.BASE_URL || '').trim()
-    : '';
-  if (envBase) {
-    return envBase.endsWith('/') ? envBase : `${envBase}/`;
-  }
-  return '/';
-}
+import { getAppBasePath } from '../auth/auth-session.js';
 
 function resolveThemedIconHref() {
   const base = getAppBasePath();
