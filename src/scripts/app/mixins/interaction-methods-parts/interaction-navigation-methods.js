@@ -1178,7 +1178,11 @@ export class ChatAppInteractionNavigationMethods {
       this.openChatsHomeView({ syncNav: false });
       return;
     }
-    if (item.parentSection) this.settingsParentSection = item.parentSection;
+    if (item.parentSection) {
+      this.settingsParentSection = item.parentSection;
+    } else if (targetNavId === 'navSettings') {
+      this.settingsParentSection = 'settings-home';
+    }
     this.pendingWalletView = item.section === 'wallet'
       ? (item.walletView || 'ledger')
       : null;

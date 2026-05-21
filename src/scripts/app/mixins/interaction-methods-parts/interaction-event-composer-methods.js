@@ -213,6 +213,9 @@ export class ChatAppInteractionEventComposerMethods extends ChatAppInteractionNa
             return;
           }
           if (window.innerWidth > 768) {
+            if (targetId === 'navSettings') {
+              this.settingsParentSection = 'settings-home';
+            }
             this.openDesktopSecondaryMenu(targetId, { activateFirst: true, triggerButton: item });
             return;
           }

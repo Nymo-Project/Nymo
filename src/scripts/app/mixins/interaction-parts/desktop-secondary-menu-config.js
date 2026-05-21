@@ -76,22 +76,22 @@ const DESKTOP_SECONDARY_MENU_CONFIG =
           {
             title: 'СПІЛКУВАННЯ',
             items: [
-              { label: 'Сповіщення', section: 'notifications-settings', parentSection: 'messenger-settings', icon: 'bell' },
-              { label: 'Конфіденційність', section: 'privacy-settings', parentSection: 'messenger-settings', icon: 'shield' },
-              { label: 'Повідомлення', section: 'messages-settings', parentSection: 'messenger-settings', icon: 'chat' }
+              { label: 'Сповіщення', section: 'notifications-settings', parentSection: 'settings-home', icon: 'bell' },
+              { label: 'Конфіденційність', section: 'privacy-settings', parentSection: 'settings-home', icon: 'shield' },
+              { label: 'Повідомлення', section: 'messages-settings', parentSection: 'settings-home', icon: 'chat' }
             ]
           },
           {
             title: 'ІНТЕРФЕЙС',
             items: [
-              { label: 'Інтерфейс', section: 'appearance-settings', parentSection: 'messenger-settings', icon: 'paint' },
-              { label: 'Мова', section: 'language-settings', parentSection: 'messenger-settings', icon: 'globe' }
+              { label: 'Інтерфейс', section: 'appearance-settings', parentSection: 'settings-home', icon: 'paint' },
+              { label: 'Мова', section: 'language-settings', parentSection: 'settings-home', icon: 'globe' }
             ]
           },
           {
             title: 'ПРОФІЛЬ',
             items: [
-              { label: 'Мої предмети', section: 'profile-items', parentSection: 'messenger-settings', icon: 'cube' }
+              { label: 'Мої предмети', section: 'profile-items', parentSection: 'settings-home', icon: 'cube' }
             ]
           }
         ]
