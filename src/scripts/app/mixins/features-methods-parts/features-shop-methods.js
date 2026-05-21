@@ -793,6 +793,20 @@ export class ChatAppFeaturesShopMethods extends ChatAppFeaturesFaqDriveUtilsMeth
       return parts.length ? parts.join(' • ') : t('Усі товари');
     };
 
+    const syncShopSecondaryMenuActive = () => {
+      if (window.innerWidth <= 768) return;
+      if (typeof this.syncDesktopSecondaryMenuActiveItem !== 'function') return;
+      const category = ['all', 'frame', 'aura', 'motion', 'badge', 'chat_bg', 'car', 'smoke'].includes(filterState.category)
+        ? filterState.category
+        : 'all';
+      this.shopFilterCategory = category;
+      this.syncDesktopSecondaryMenuActiveItem({
+        section: 'messenger-settings',
+        parentSection: 'messenger-settings',
+        shopCategory: category
+      });
+    };
+
     const syncFilterControls = () => {
       if (filterPanelEl) {
         filterPanelEl.querySelectorAll('[data-shop-filter-group]').forEach(btn => {
@@ -806,6 +820,7 @@ export class ChatAppFeaturesShopMethods extends ChatAppFeaturesFaqDriveUtilsMeth
       if (minPriceValueEl) minPriceValueEl.textContent = this.formatCoinBalance(filterState.minPrice, 1);
       if (maxPriceValueEl) maxPriceValueEl.textContent = this.formatCoinBalance(filterState.maxPrice, 1);
       if (filterSummaryEl) filterSummaryEl.textContent = getFilterSummary();
+      syncShopSecondaryMenuActive();
     };
 
     const getFilterPanelEl = () => (

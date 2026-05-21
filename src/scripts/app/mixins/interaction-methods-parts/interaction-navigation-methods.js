@@ -1271,7 +1271,8 @@ export class ChatAppInteractionNavigationMethods {
     }
 
     if (section === 'messenger-settings') {
-      criteria.shopCategory = String(this.pendingShopCategory || 'all').trim() || 'all';
+      const activeCategory = String(this.shopFilterCategory || this.pendingShopCategory || 'all').trim() || 'all';
+      criteria.shopCategory = activeCategory;
     }
 
     if (section === 'profile-items') {
